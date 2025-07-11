@@ -1,32 +1,51 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PDFKaro - Free Online PDF Tools</title>
-  <link href="/static/css/style.css" rel="stylesheet">
+  <title>PDFKaro - Free PDF Tools</title>
+  <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body class="bg-gray-100">
-  <header class="bg-white shadow p-4 text-center">
-    <h1 class="text-2xl font-bold">PDFKaro</h1>
-    <p class="text-gray-600">Merge, Split, Compress your PDFs online</p>
+<body>
+  <header>
+    <h1>📄 PDFKaro Tools</h1>
+    <p>Simple, Free & Fast PDF Utilities</p>
   </header>
-  <main class="p-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-    <a href="/merge" class="bg-white p-4 rounded-xl shadow hover:shadow-xl transition">
-      <img src="/static/icons/merge.svg" class="w-6 h-6 mb-2" />
-      <h2 class="font-bold text-lg">Merge PDF</h2>
-      <p class="text-sm text-gray-500">Combine PDFs in one document.</p>
-    </a>
-    <a href="/split" class="bg-white p-4 rounded-xl shadow hover:shadow-xl transition">
-      <img src="/static/icons/split.svg" class="w-6 h-6 mb-2" />
-      <h2 class="font-bold text-lg">Split PDF</h2>
-      <p class="text-sm text-gray-500">Split large PDFs into smaller ones.</p>
-    </a>
-    <a href="/compress" class="bg-white p-4 rounded-xl shadow hover:shadow-xl transition">
-      <img src="/static/icons/compress.svg" class="w-6 h-6 mb-2" />
-      <h2 class="font-bold text-lg">Compress PDF</h2>
-      <p class="text-sm text-gray-500">Reduce PDF file size.</p>
-    </a>
-  </main>
+
+  <section class="tool-container">
+    <div class="tool-card">
+      <img src="/static/images/merge.png" alt="Merge Icon" class="tool-icon">
+      <h2>Merge PDF</h2>
+      <form id="merge-form">
+        <input type="file" id="merge-files" multiple required>
+        <button type="submit">Merge Now</button>
+      </form>
+    </div>
+
+    <div class="tool-card">
+      <img src="/static/images/split.png" alt="Split Icon" class="tool-icon">
+      <h2>Split PDF</h2>
+      <form id="split-form">
+        <input type="file" id="split-file" required><br>
+        <input type="number" id="split-from" placeholder="From Page" required>
+        <input type="number" id="split-to" placeholder="To Page" required>
+        <button type="submit">Split Now</button>
+      </form>
+    </div>
+
+    <div class="tool-card">
+      <img src="/static/images/compress.png" alt="Compress Icon" class="tool-icon">
+      <h2>Compress PDF</h2>
+      <form id="compress-form">
+        <input type="file" id="compress-file" required>
+        <button type="submit">Compress Now</button>
+      </form>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2025 PDFKaro.in | Made with ❤️ in India</p>
+  </footer>
+
+  <script src="/static/js/pdfkaro.js"></script>
 </body>
 </html>
