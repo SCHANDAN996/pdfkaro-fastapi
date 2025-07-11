@@ -2,48 +2,28 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>PDFKaro - Free PDF Tools</title>
+  <title>PDFKaro - Merge PDF</title>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
   <header>
-    <h1>📄 PDFKaro Tools</h1>
-    <p>Simple, Free & Fast PDF Utilities</p>
+    <h1>📄 PDFKaro - Merge PDF</h1>
+    <p>Select multiple PDFs to merge them into one</p>
   </header>
 
   <section class="tool-container">
     <div class="tool-card">
-      <img src="/static/images/merge.png" alt="Merge Icon" class="tool-icon">
+      <img src="/static/images/merge.png" class="tool-icon">
       <h2>Merge PDF</h2>
       <form id="merge-form">
-        <input type="file" id="merge-files" multiple required>
+        <input type="file" id="merge-files" multiple required><br><br>
         <button type="submit">Merge Now</button>
-      </form>
-    </div>
-
-    <div class="tool-card">
-      <img src="/static/images/split.png" alt="Split Icon" class="tool-icon">
-      <h2>Split PDF</h2>
-      <form id="split-form">
-        <input type="file" id="split-file" required><br>
-        <input type="number" id="split-from" placeholder="From Page" required>
-        <input type="number" id="split-to" placeholder="To Page" required>
-        <button type="submit">Split Now</button>
-      </form>
-    </div>
-
-    <div class="tool-card">
-      <img src="/static/images/compress.png" alt="Compress Icon" class="tool-icon">
-      <h2>Compress PDF</h2>
-      <form id="compress-form">
-        <input type="file" id="compress-file" required>
-        <button type="submit">Compress Now</button>
       </form>
     </div>
   </section>
 
   <footer>
-    <p>© 2025 PDFKaro.in | Made with ❤️ in India</p>
+    <p>© 2025 PDFKaro.in | Made with ❤️</p>
   </footer>
 
   <script src="/static/js/pdfkaro.js"></script>
