@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-{% block title %}Compress PDF - PDFKaro{% endblock %}
-{% block content %}
-<h1>Compress PDF</h1>
-<form action="/api/compress" method="post" enctype="multipart/form-data">
-  <input type="file" name="file" required>
-  <button type="submit">Compress Now</button>
-</form>
-{% endblock %}
