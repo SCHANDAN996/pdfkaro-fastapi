@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Merge PDF - PDFKaro{% endblock %}
+{% block content %}
+<h1>Merge PDF</h1>
+<form action="/api/merge" method="post" enctype="multipart/form-data">
+  <input type="file" name="files" multiple required>
+  <button type="submit">Merge Now</button>
+</form>
+{% endblock %}

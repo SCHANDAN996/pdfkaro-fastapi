@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Split PDF - PDFKaro{% endblock %}
+{% block content %}
+<h1>Split PDF</h1>
+<form action="/api/split" method="post" enctype="multipart/form-data">
+  <input type="file" name="file" required>
+  <input type="number" name="start" placeholder="Start page" required>
+  <input type="number" name="end" placeholder="End page" required>
+  <button type="submit">Split Now</button>
+</form>
+{% endblock %}
