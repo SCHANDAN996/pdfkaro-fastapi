@@ -1,9 +1,10 @@
-from fastapi import HTTPException
-from app.utils.file_handler import compress_pdf
+from fastapi import APIRouter, UploadFile
+import subprocess
 
-async def compress_pdf(file: str, compression_level: int):
-    try:
-        compressed_pdf = compress_pdf(file, compression_level)
-        return {"message": "PDF compressed successfully", "compressed_pdf": compressed_pdf}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error compressing PDF: {str(e)}")
+router = APIRouter()
+
+@router.post("/compress")
+async def compress_pdf(file: UploadFile, quality: int = 50):
+    # Ghostscript का उपयोग करें
+    subprocess.run(["gs", "-sDEVICE=pdfwrite", f"-dPDFSETTINGS=/{quality}", "-o", "compressed.pdf", file.file])
+    return {"output": "compressed.pdf"}
