@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from app.utils.file_handler import merge_pdfs, generate_pdf_preview
 from app.utils.preview_utils import create_pdf_preview
-from app.utils.file_handler import merge_pdfs
+
 
 
 async def merge_pdfs(files: list, preview: bool = False):
