@@ -9,7 +9,7 @@
 <body>
   <div class="container">
     <h1>PDF मर्जर टूल</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
+    <form id="uploadForm" enctype="multipart/form-data" action="/merge" method="post">
       <label for="pdfs">PDF फ़ाइलें चुनें (अधिकतम 10):</label>
       <input type="file" id="pdfs" name="pdfs" accept="application/pdf" multiple required>
       <button type="submit">मर्ज करें</button>
