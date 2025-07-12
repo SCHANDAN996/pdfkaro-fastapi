@@ -6,3 +6,5 @@ pdfminer.six
 pillow
 tesseract
 python-dotenv
+pdf2image
+
