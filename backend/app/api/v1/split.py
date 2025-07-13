@@ -1,4 +1,3 @@
-# backend/app/api/v1/split.py
 from fastapi import APIRouter
 from app.services.pdf_service import split_pdf
 from pydantic import BaseModel
