@@ -1,14 +1,13 @@
 from fastapi import FastAPI
-from app.api.v1 import merge, compress, split, ocr
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi import Request
 
 app = FastAPI()
 
-# Register API routers
-app.include_router(merge.router, prefix="/v1/merge", tags=["Merge"])
-app.include_router(compress.router, prefix="/v1/compress", tags=["Compress"])
-app.include_router(split.router, prefix="/v1/split", tags=["Split"])
-app.include_router(ocr.router, prefix="/v1/ocr", tags=["OCR"])
+# Set up Jinja2 for HTML templating
+templates = Jinja2Templates(directory="backend/app/templates")
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to PDFkaro.in API!"}
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
