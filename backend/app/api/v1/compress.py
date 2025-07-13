@@ -1,4 +1,3 @@
-# backend/app/api/v1/compress.py
 from fastapi import APIRouter
 from app.services.pdf_service import compress_pdf
 from pydantic import BaseModel
