@@ -1,19 +1,39 @@
-# Core Requirements
+
 fastapi
 uvicorn
+jinja2
 python-multipart
-
-# PDF Processing - updated versions
-PyPDF2
-pdf2image
-Pillow  # Updated to newer stable version
-
-# OCR - simplified
-pytesseract
-
-# Alternative PDF processing
-pypdf  # Modern alternative
-
-# Production
-gunicorn
 aiofiles
+PyPDF2
+PyMuPDF
+fpdf
+Pillow
+pdf2image
+pdfkit
+docx2pdf
+pdf2docx
+python-docx
+python-pptx
+reportlab
+pytesseract
+opencv-python
+filetype
+langdetect
+textblob
+pandas
+tabula
+fastapi
+uvicorn
+PyPDF2
+PyMuPDF
+Pillow
+reportlab
+fpdf
+pytesseract
+pdf2image
+pdfkit
+tabula-py
+pdf2docx
+docx2pdf
+python-pptx
+comtypes
