@@ -1,24 +1,24 @@
-# backend/app/services/pdf_service.py
 import pytesseract
 from PyPDF2 import PdfMerger, PdfReader, PdfWriter
 from pdf2image import convert_from_path
 
-# Function to merge multiple PDFs
+# 1. PDF Merge
 def merge_pdfs(file_paths):
     pdf_writer = PdfMerger()
+
     for path in file_paths:
         pdf_writer.append(path)  # Add each PDF file to be merged
+    
     output_path = "merged_output.pdf"
     pdf_writer.write(output_path)
     return output_path
 
-# Function to compress a PDF
+# 2. PDF Compress
 def compress_pdf(file_path, size_percentage):
-    # Read PDF
     reader = PdfReader(file_path)
     writer = PdfWriter()
 
-    # Set compression level (just a placeholder for now)
+    # Placeholder: Implement compression logic (Here, we simply copy pages as is)
     for page in reader.pages:
         writer.add_page(page)
 
@@ -28,7 +28,7 @@ def compress_pdf(file_path, size_percentage):
 
     return output_path
 
-# Function to split a PDF
+# 3. PDF Split
 def split_pdf(file_path, start_page, end_page):
     reader = PdfReader(file_path)
     writer = PdfWriter()
@@ -43,14 +43,12 @@ def split_pdf(file_path, start_page, end_page):
 
     return output_path
 
-# Function to process OCR from a PDF or image
+# 4. OCR (Optical Character Recognition) for PDFs and Images
 def ocr_pdf(file_path):
-    # Convert PDF to images
-    images = convert_from_path(file_path)
-
-    # Use pytesseract to extract text from images
+    images = convert_from_path(file_path)  # Convert PDF to images
     extracted_text = ""
+    
     for img in images:
-        extracted_text += pytesseract.image_to_string(img)
-
+        extracted_text += pytesseract.image_to_string(img)  # Extract text using Tesseract
+    
     return extracted_text
