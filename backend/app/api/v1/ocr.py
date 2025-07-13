@@ -1,4 +1,3 @@
-# backend/app/api/v1/ocr.py
 from fastapi import APIRouter
 from app.services.pdf_service import ocr_pdf
 from pydantic import BaseModel
