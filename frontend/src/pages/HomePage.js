@@ -6,12 +6,8 @@ const HomePage = () => {
   return (
     <div>
       <h1>Welcome to PDFkaro.in</h1>
-      <button>
-        <Link to="/tool/merge">Merge PDF</Link>
-      </button>
-      <button>
-        <Link to="/tool/compress">Compress PDF</Link>
-      </button>
+      <Link to="/tool/merge">Merge PDF</Link>
+      <Link to="/tool/compress">Compress PDF</Link>
     </div>
   );
 };
