@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from app.api import merge, split, compress, convert, watermark, ocr
+import sys
+from pathlib import Path
 
+# प्रोजेक्ट रूट को Python पाथ में जोड़ें
+sys.path.append(str(Path(__file__).parent.parent))
 app = FastAPI()
 
 # Define the routes for each tool
