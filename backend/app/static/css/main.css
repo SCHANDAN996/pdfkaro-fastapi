@@ -1,0 +1,55 @@
+/* Reset some basic styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Body Styling */
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #f4f4f9;
+  color: #333;
+  text-align: center;
+  padding: 20px;
+}
+
+/* Header Styling */
+h1 {
+  font-size: 2.5rem;
+  color: #6a5acd; /* Slate Blue color */
+  margin-bottom: 20px;
+}
+
+/* Paragraph Styling */
+p {
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+/* Link Styling */
+a {
+  font-size: 1.2rem;
+  color: #4caf50; /* Mint Green color */
+  text-decoration: none;
+}
+
+a:hover {
+  color: #6a5acd; /* Slate Blue color on hover */
+}
+
+/* Button Styling */
+button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+button:hover {
+  background-color: #6a5acd; /* Slate Blue color on hover */
+}
