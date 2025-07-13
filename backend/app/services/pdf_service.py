@@ -1,8 +1,8 @@
 # backend/app/services/pdf_service.py
-import PyPDF2
+from PyPDF2 import PdfMerger
 
 def merge_pdfs(file_paths):
-    pdf_writer = PyPDF2.PdfMerger()
+    pdf_writer = PdfMerger()
     for path in file_paths:
         pdf_writer.append(path)
     output_path = "merged_output.pdf"
