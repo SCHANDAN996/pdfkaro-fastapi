@@ -3,17 +3,17 @@ fastapi==0.95.2
 uvicorn==0.22.0
 python-multipart==0.0.6
 
-# PDF Processing
+# PDF Processing - updated versions
 PyPDF2==3.0.1
 pdf2image==1.16.3
-Pillow==9.5.0
+Pillow==10.1.0  # Updated to newer stable version
 
-# OCR (Modified to avoid version conflicts)
+# OCR - simplified
 pytesseract==0.3.10
 
-# Alternative Compression
-pypdf==3.17.4  # Modern PDF library
+# Alternative PDF processing
+pypdf==4.2.0  # Modern alternative
 
 # Production
-gunicorn==20.1.0
-aiofiles==23.1.0
+gunicorn==21.2.0
+aiofiles==23.2.1
