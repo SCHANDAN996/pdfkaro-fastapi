@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from app.utils.file_handler import split_pdf
+from ..utils.file_handler import split_pdf
 
 async def split_pdf(file: str, page_number: int):
     try:
