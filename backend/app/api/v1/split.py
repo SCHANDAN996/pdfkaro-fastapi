@@ -2,8 +2,9 @@ import io
 import logging
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query
 from fastapi.responses import StreamingResponse
-import pikepdf
+import zipfile
 from typing import List
+import re
 from app.services.pdf_processor import pdf_processor
 
 router = APIRouter()
@@ -26,10 +27,10 @@ async def split_pdf(
         # Process the PDF
         if pages.lower() == "all":
             # Extract all pages as individual PDFs
-            result = await pdf_processor.extract_all_pages(content)
+            result = await pdf_processor.extract_all_pages(content, file.filename)
         else:
             # Extract specific page ranges
-            result = await pdf_processor.extract_page_ranges(content, pages)
+            result = await pdf_processor.extract_page_ranges(content, pages, file.filename)
         
         # Return the zip file
         return StreamingResponse(
