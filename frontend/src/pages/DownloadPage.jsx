@@ -1,21 +1,23 @@
 import React, { useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Download, Share2, Trash2, ArrowLeft, RefreshCw, Lock, FileShrink2 } from 'lucide-react';
+import { Download, Share2, Trash2, ArrowLeft, RefreshCw, Lock, FileShrink, Scissors } from 'lucide-react';
 
 const DownloadPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    
+    // State se data nikalein
     const downloadUrl = location.state?.downloadUrl;
+    const fileName = location.state?.fileName || "downloaded_by_PDFkaro.in.pdf";
+    const sourceTool = location.state?.sourceTool || 'merge'; // 'merge' ya 'split'
 
-    // Yadi koi download URL nahi hai, to user ko wapas bhej dein
     useEffect(() => {
         if (!downloadUrl) {
-            console.error("No download URL found, redirecting to merge page.");
-            navigate('/merge');
+            console.error("No download URL found, redirecting to home page.");
+            navigate('/');
         }
     }, [downloadUrl, navigate]);
 
-    // Cleanup function to revoke the object URL when the component unmounts
     useEffect(() => {
         return () => {
             if (downloadUrl) {
@@ -25,21 +27,26 @@ const DownloadPage = () => {
     }, [downloadUrl]);
     
     if (!downloadUrl) {
-        return null; // Ya ek loading indicator dikhayein
+        return null;
     }
+
+    // Iske aadhar par text aur options badlenge
+    const isFromMerge = sourceTool === 'merge';
 
     return (
         <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 md:p-8 text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">Your PDFs have been merged!</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
+                {isFromMerge ? 'Your PDFs have been merged!' : 'Your PDF has been split!'}
+            </h1>
             <p className="text-slate-600 mt-2 mb-8">Your file is ready to download.</p>
 
             <a
                 href={downloadUrl}
-                download="merged_document.pdf"
+                download={fileName}
                 className="inline-flex items-center justify-center bg-slate-700 text-white font-bold py-4 px-16 rounded-lg text-lg hover:bg-slate-800 transition-transform duration-200 ease-in-out hover:scale-105 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
             >
                 <Download className="mr-3" />
-                Download Merged PDF
+                Download {isFromMerge ? 'Merged File' : 'ZIP File'}
             </a>
 
             <div className="mt-6 flex items-center justify-center space-x-4">
@@ -52,9 +59,9 @@ const DownloadPage = () => {
             </div>
             
             <div className="mt-12">
-                 <Link to="/merge" className="inline-flex items-center text-slate-600 hover:text-slate-800 font-semibold">
+                 <Link to={isFromMerge ? '/merge' : '/split'} className="inline-flex items-center text-slate-600 hover:text-slate-800 font-semibold">
                     <ArrowLeft className="mr-2" size={20} />
-                    Back to Merge
+                    Back to {isFromMerge ? 'Merge' : 'Split'}
                 </Link>
             </div>
 
@@ -62,12 +69,12 @@ const DownloadPage = () => {
                 <h2 className="text-xl font-bold text-slate-700 mb-4">Continue to...</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <Link to="/compress" className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        <FileShrink2 className="text-slate-500 mr-4" />
+                        <FileShrink className="text-slate-500 mr-4" />
                         <span className="font-semibold text-slate-800">Compress PDF</span>
                     </Link>
-                     <Link to="/split" className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        <RefreshCw className="text-slate-500 mr-4" />
-                        <span className="font-semibold text-slate-800">Split PDF</span>
+                     <Link to={isFromMerge ? '/split' : '/merge'} className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                        {isFromMerge ? <Scissors className="text-slate-500 mr-4" /> : <RefreshCw className="text-slate-500 mr-4" />}
+                        <span className="font-semibold text-slate-800">{isFromMerge ? 'Split PDF' : 'Merge PDFs'}</span>
                     </Link>
                      <Link to="/protect" className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
                         <Lock className="text-slate-500 mr-4" />
