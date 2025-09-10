@@ -1,54 +1,35 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import PyPDF2
-import io
-from typing import List
+from app.core.config import settings
+from app.api.v1 import merge  # अन्य टूल राउटर्स को यहाँ आयात करें
 
-# FastAPI app banayein
-app = FastAPI(title="PDFkaro.in API")
-
-# CORS (Cross-Origin Resource Sharing) ko enable karein
-# Taki hamara React app isse connect kar sake
-# "*" ka matlab hai ki koi bhi website isse connect kar sakti hai
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+# यह मुख्य एप्लिकेशन फ़ाइल है।
+# यह FastAPI ऐप को इनिशियलाइज़ करती है, मिडलवेयर सेट करती है, और सभी टूल राउटर्स को शामिल करती है।
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-@app.get("/")
+# CORS मिडलवेयर सेट करें
+# यह आपके React फ्रंटएंड को बैकएंड API से अनुरोध करने की अनुमति देता है।
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# API राउटर्स को शामिल करें
+# प्रत्येक टूल का अपना प्रीफिक्स होता है, जो API को व्यवस्थित रखता है।
+app.include_router(merge.router, prefix=f"{settings.API_V1_STR}/pdf", tags=)
+# app.include_router(compress.router, prefix=f"{settings.API_V1_STR}/pdf", tags=)
+# app.include_router(split.router, prefix=f"{settings.API_V1_STR}/pdf", tags=)
+
+@app.get("/", summary="Health Check")
 def read_root():
-    return {"message": "PDFkaro.in Backend is running!"}
-
-# PDF Merge karne ke liye API endpoint
-@app.post("/api/v1/merge")
-async def merge_pdfs(files: List[UploadFile] = File(...)):
-    merger = PyPDF2.PdfMerger()
-
-    for file in files:
-        pdf_content = await file.read()
-        merger.append(io.BytesIO(pdf_content))
-    
-    output_buffer = io.BytesIO()
-    merger.write(output_buffer)
-    merger.close()
-    
-    output_buffer.seek(0)
-    
-    # Abhi ke liye hum sirf success message bhej rahe hain
-    print(f"{len(files)} files merged successfully.")
-    
-    # Asli application me hum yahan se file wapas bhejenge
-    return {"message": f"{len(files)} files successfully merged!"}
-
-# PDF Split karne ke liye API endpoint
-@app.post("/api/v1/split")
-async def split_pdf(file: UploadFile = File(...)):
-    # Asli PDF split karne ka logic yahan likha jayega
-    print(f"File to split: {file.filename}")
-    
-    return {"message": f"Splitting logic for '{file.filename}' will be implemented here."}
-
-
+    """
+    यह सुनिश्चित करने के लिए एक सरल हेल्थ चेक एंडपॉइंट कि सेवा चल रही है।
+    """
+    return {"status": "ok", "message": f"Welcome to {settings.PROJECT_NAME}"}
