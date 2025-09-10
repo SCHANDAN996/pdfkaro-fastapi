@@ -8,9 +8,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 // Lazy load pages for better performance
 const HomePage = lazy(() => import('./pages/HomePage'));
 const MergePage = lazy(() => import('./pages/MergePage'));
-const SplitPage = lazy(() => import('./pages/SplitPage'));  // Add this import
+const SplitPage = lazy(() => import('./pages/SplitPage'));
 const DownloadPage = lazy(() => import('./pages/DownloadPage'));
-const CompressPage = lazy(() => import('./pages/CompressPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function App() {
@@ -25,8 +24,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/merge" element={<MergePage />} />
-                <Route path="/split" element={<SplitPage />} />  {/* Add this route */}
-                <Route path="/compress" element={<CompressPage />} />
+                <Route path="/split" element={<SplitPage />} />
                 <Route path="/download" element={<DownloadPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
