@@ -1,10 +1,11 @@
 import io
+import logging
+from typing import List
+
+import pikepdf
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-import pikepdf
-from typing import List
-import logging
+from fastapi.responses import Response, StreamingResponse
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -14,16 +15,23 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="PDFkaro.in Backend")
 
 # --- CORS Configuration ---
-# Allow all origins for now to ensure connectivity.
+# Allow all origins to ensure connectivity.
 origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"], # Allow OPTIONS method
     allow_headers=["*"],
 )
+
+# --- Explicit OPTIONS route for preflight requests ---
+# Yeh browser ke security guard (preflight request) ko handle karega
+@app.options("/api/v1/merge")
+async def merge_options():
+    logger.info("Received OPTIONS request for /api/v1/merge")
+    return Response(status_code=200)
 
 @app.get("/")
 def read_root():
@@ -32,22 +40,17 @@ def read_root():
 
 @app.post("/api/v1/merge")
 async def merge_pdfs(files: List[UploadFile] = File(...)):
-    logger.info(f"Received {len(files)} files for merging.")
+    logger.info(f"SUCCESS: Received {len(files)} files for merging.")
     try:
         merged_pdf = pikepdf.Pdf.new()
 
         for file in files:
-            logger.info(f"Processing file: {file.filename}")
             pdf_bytes = await file.read()
-            
-            # Use a try-except block for each PDF to handle corrupted files
             try:
                 src_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
                 merged_pdf.pages.extend(src_pdf.pages)
-            except Exception as individual_file_error:
-                logger.error(f"Could not process file {file.filename}: {individual_file_error}")
-                # Optionally, you can skip corrupted files or raise an error
-                # For now, we will skip it.
+            except Exception as e:
+                logger.warning(f"Skipping corrupted file {file.filename}: {e}")
                 
         output_buffer = io.BytesIO()
         merged_pdf.save(output_buffer)
