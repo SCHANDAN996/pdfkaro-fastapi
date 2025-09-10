@@ -1,16 +1,21 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-from typing import List
-import pikepdf
 import io
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+import pikepdf
+from typing import List
+import logging
 
-app = FastAPI()
+# Logging setup
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# --- यहाँ पर सुधार किया गया है ---
-# Origins ki list yahan daalein. "*" ka matlab hai sabhi ko allow karna.
-origins = [
-    "*",  
-]
+# FastAPI app
+app = FastAPI(title="PDFkaro.in Backend")
+
+# --- CORS Configuration ---
+# Allow all origins for now to ensure connectivity.
+origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,43 +24,42 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# --- सुधार समाप्त ---
-
 
 @app.get("/")
 def read_root():
+    logger.info("Root endpoint was hit.")
     return {"message": "PDFkaro.in Backend is running!"}
-
 
 @app.post("/api/v1/merge")
 async def merge_pdfs(files: List[UploadFile] = File(...)):
-    if len(files) < 2:
-        return {"error": "Please upload at least two PDF files to merge."}
+    logger.info(f"Received {len(files)} files for merging.")
+    try:
+        merged_pdf = pikepdf.Pdf.new()
 
-    output_pdf = pikepdf.Pdf.new()
+        for file in files:
+            logger.info(f"Processing file: {file.filename}")
+            pdf_bytes = await file.read()
+            
+            # Use a try-except block for each PDF to handle corrupted files
+            try:
+                src_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
+                merged_pdf.pages.extend(src_pdf.pages)
+            except Exception as individual_file_error:
+                logger.error(f"Could not process file {file.filename}: {individual_file_error}")
+                # Optionally, you can skip corrupted files or raise an error
+                # For now, we will skip it.
+                
+        output_buffer = io.BytesIO()
+        merged_pdf.save(output_buffer)
+        output_buffer.seek(0)
+        logger.info("PDFs merged successfully. Sending response.")
 
-    for file in files:
-        try:
-            # incoming file ko memory me read karein
-            pdf_data = await file.read()
-            src_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_data))
-            output_pdf.pages.extend(src_pdf.pages)
-        except Exception as e:
-            return {"error": f"Error processing file {file.filename}: {str(e)}"}
-        finally:
-            await file.close()
-    
-    # Merged PDF ko memory me save karein
-    output_buffer = io.BytesIO()
-    output_pdf.save(output_buffer)
-    output_buffer.seek(0)
-
-    # Abhi ke liye success message bhej rahe hain
-    # Baad me yahan se file download karne ka logic add karenge
-    return {"message": f"Successfully merged {len(files)} PDF files."}
-
-# Split ka logic baad me add karenge
-# @app.post("/api/v1/split")
-# async def split_pdf(file: UploadFile = File(...)):
-#     return {"message": "Split logic will be here."}
+        return StreamingResponse(
+            output_buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=merged_document.pdf"}
+        )
+    except Exception as e:
+        logger.error(f"An unexpected error occurred during merging: {e}")
+        raise HTTPException(status_code=500, detail="An internal server error occurred.")
 
