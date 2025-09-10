@@ -1,15 +1,14 @@
 import React, { useEffect } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Download, Share2, Trash2, ArrowLeft, RefreshCw, Lock, FileShrink, Scissors } from 'lucide-react';
+import { Download, Share2, Trash2, ArrowLeft, RefreshCw, Lock, FileArchive, Scissors } from 'lucide-react'; // FileZip ko FileArchive se badal diya gaya hai
 
 const DownloadPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
     
-    // State se data nikalein
     const downloadUrl = location.state?.downloadUrl;
     const fileName = location.state?.fileName || "downloaded_by_PDFkaro.in.pdf";
-    const sourceTool = location.state?.sourceTool || 'merge'; // 'merge' ya 'split'
+    const sourceTool = location.state?.sourceTool || 'merge';
 
     useEffect(() => {
         if (!downloadUrl) {
@@ -30,7 +29,6 @@ const DownloadPage = () => {
         return null;
     }
 
-    // Iske aadhar par text aur options badlenge
     const isFromMerge = sourceTool === 'merge';
 
     return (
@@ -69,7 +67,7 @@ const DownloadPage = () => {
                 <h2 className="text-xl font-bold text-slate-700 mb-4">Continue to...</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <Link to="/compress" className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        <FileShrink className="text-slate-500 mr-4" />
+                        <FileArchive className="text-slate-500 mr-4" /> {/* Yahan bhi badlav kiya gaya hai */}
                         <span className="font-semibold text-slate-800">Compress PDF</span>
                     </Link>
                      <Link to={isFromMerge ? '/split' : '/merge'} className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
