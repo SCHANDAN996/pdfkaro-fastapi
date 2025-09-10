@@ -15,8 +15,96 @@ class PDFProcessor:
     Separates business logic from API endpoints for better maintainability
     """
 
-    # ... (keep existing merge_pdfs and compress_pdf methods) ...
-    
+    async def merge_pdfs(self, files: List) -> bytes:
+        """
+        Merge multiple PDF files into a single PDF
+        """
+        if len(files) < 2:
+            raise HTTPException(
+                status_code=400, 
+                detail="At least 2 PDF files are required for merging"
+            )
+        
+        try:
+            merged_pdf = pikepdf.Pdf.new()
+            processed_files = 0
+            
+            for file in files:
+                try:
+                    content = await file.read()
+                    # Reset file pointer for potential reuse
+                    await file.seek(0)
+                    
+                    with pikepdf.Pdf.open(io.BytesIO(content)) as src_pdf:
+                        merged_pdf.pages.extend(src_pdf.pages)
+                        processed_files += 1
+                        logger.info(f"Successfully processed: {file.filename}")
+                        
+                except Exception as individual_file_error:
+                    logger.error(f"Could not process file {file.filename}: {individual_file_error}")
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"File {file.filename} is not a valid PDF"
+                    )
+            
+            if processed_files == 0:
+                raise HTTPException(
+                    status_code=400, 
+                    detail="No valid PDF files found in the upload"
+                )
+                
+            # Save merged PDF to memory
+            output_buffer = io.BytesIO()
+            merged_pdf.save(output_buffer)
+            output_buffer.seek(0)
+            
+            return output_buffer.getvalue()
+            
+        except Exception as e:
+            logger.error(f"An unexpected error occurred during merging: {e}")
+            raise HTTPException(status_code=500, detail="An internal server error occurred.")
+
+    async def compress_pdf(self, file, compression_level: int = 2) -> bytes:
+        """
+        Compress a PDF file with specified compression level
+        """
+        try:
+            content = await file.read()
+            # Reset file pointer
+            await file.seek(0)
+            
+            with pikepdf.Pdf.open(io.BytesIO(content)) as pdf:
+                # Remove unused resources
+                pdf.remove_unreferenced_resources()
+                
+                # Configure compression based on level
+                compression_params = {
+                    'compress_streams': True,
+                    'linearize': True
+                }
+                
+                if compression_level >= 2:
+                    compression_params['object_stream_mode'] = 'preserve'
+                    
+                if compression_level >= 3:
+                    # More aggressive compression options
+                    compression_params['stream_compression_level'] = 9
+                
+                # Save with compression
+                output_buffer = io.BytesIO()
+                pdf.save(output_buffer, **compression_params)
+                output_buffer.seek(0)
+                
+                logger.info(f"Successfully compressed: {file.filename}")
+                return output_buffer.getvalue()
+                
+        except Exception as e:
+            logger.error(f"Compression failed for {file.filename}: {e}")
+            raise HTTPException(
+                status_code=500, 
+                detail=f"PDF compression failed: {str(e)}"
+            )
+
     async def extract_all_pages(self, pdf_content: bytes, original_filename: str) -> bytes:
         """
         Extract all pages as individual PDF files and return as a zip
