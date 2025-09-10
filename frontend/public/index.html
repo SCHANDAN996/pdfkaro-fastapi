@@ -7,14 +7,28 @@
     <meta name="theme-color" content="#000000" />
     <meta
       name="description"
-      content="All your PDF tools in one place. Merge, split, compress, and convert PDFs easily."
+      content="The best free tools to merge, split, compress, and manage your PDF files online. Easy, fast, and secure."
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <title>PDFkaro.in - All PDF Tools</title>
+    
+    <!-- Google Fonts for better typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    
+    <!-- YEH SABSE ZAROORI HAI: PDF.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.min.js"></script>
+    <script>
+      // PDF.js ko global worker set karna
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.6.347/pdf.worker.min.js`;
+    </script>
+
+    <title>PDFkaro.in - All PDF Tools in One Place</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>
 </html>
+
