@@ -1,0 +1,8 @@
+{
+  "short_name": "PDFkaro.in",
+  "name": "PDFkaro.in - All in one PDF tool",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#6A5ACD",
+  "background_color": "#ffffff"
+}
