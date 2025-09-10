@@ -1,40 +1,59 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from fastapi.responses import Response
+import io
+from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+import pikepdf
 from typing import List
-from app.services.pdf_processor import PDFProcessor, pdf_processor_service
 
-# प्रत्येक टूल के लिए एक अलग राउटर बनाना कोड को मॉड्यूलर और व्यवस्थित रखता है।
-router = APIRouter()
+# FastAPI ऐप को शुरू करें
+app = FastAPI(title="PDFkaro.in Backend")
 
-@router.post("/merge", 
-    summary="Merge Multiple PDFs",
-    description="Upload multiple PDF files to combine them into a single document."
+# CORS को कॉन्फ़िगर करें ताकि हमारा फ्रंटएंड कनेक्ट हो सके
+# यह बहुत ज़रूरी है
+origins = [
+    "https://pdfkaro.in",
+    "https://www.pdfkaro.in",
+    "https://pdfkaro-frontend.onrender.com",
+    "http://localhost:3000", # Local development के लिए
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
-async def merge_pdfs_endpoint(
-    files: List[UploadFile] = File(..., description="List of PDF files to merge."),
-    pdf_processor: PDFProcessor = Depends(lambda: pdf_processor_service)
-):
-    """
-    कई PDF फाइलों को एक में मर्ज करने के लिए API एंडपॉइंट।
-    यह `PDFProcessor` सेवा का उपयोग करके वास्तविक तर्क को संभालता है।
-    """
-    if not files:
-        raise HTTPException(status_code=400, detail="No files were uploaded.")
 
+# यह एक साधारण रूट है यह चेक करने के लिए कि API चल रहा है या नहीं
+@app.get("/")
+def read_root():
+    return {"message": "PDFkaro.in Backend is running!"}
+
+# यह मुख्य API एंडपॉइंट है जो PDF फाइलों को मर्ज करेगा
+@app.post("/api/v1/merge")
+async def merge_pdfs(files: List[UploadFile] = File(...)):
+    # एक खाली PDF बनाएं जिसमें हम सभी पेजों को डालेंगे
+    merged_pdf = pikepdf.Pdf.new()
+
+    # हर अपलोड की गई PDF फाइल को प्रोसेस करें
     for file in files:
-        if file.content_type!= "application/pdf":
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Invalid file type: {file.filename}. Only PDF files are allowed."
-            )
+        # अपलोड की गई फाइल को मेमोरी में पढ़ें
+        pdf_bytes = await file.read()
+        # मेमोरी से PDF को खोलें
+        src_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
+        # उस PDF के सभी पेजों को हमारी खाली PDF में जोड़ें
+        merged_pdf.pages.extend(src_pdf.pages)
 
-    try:
-        merged_pdf_bytes = await pdf_processor.merge_pdfs(files)
-        
-        return Response(
-            content=merged_pdf_bytes,
-            media_type="application/pdf",
-            headers={"Content-Disposition": "attachment; filename=merged_document.pdf"}
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred during merging: {str(e)}")
+    # मर्ज की गई PDF को मेमोरी में सेव करें
+    output_buffer = io.BytesIO()
+    merged_pdf.save(output_buffer)
+    output_buffer.seek(0)
+
+    # मेमोरी से PDF को स्ट्रीम करें और फाइल को डाउनलोड के लिए भेजें
+    return StreamingResponse(
+        output_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=merged_document.pdf"}
+    )
+
