@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 import pikepdf
 from typing import List
 import logging
+from app.api.v1.split import router as split_router
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -65,4 +66,8 @@ async def merge_pdfs(files: List[UploadFile] = File(...)):
     except Exception as e:
         logger.error(f"An unexpected error occurred during merging: {e}")
         raise HTTPException(status_code=500, detail="An internal server error occurred.")
+
+
+# Add this after the merge router inclusion
+app.include_router(split_router, prefix=settings.API_V1_STR)
 
