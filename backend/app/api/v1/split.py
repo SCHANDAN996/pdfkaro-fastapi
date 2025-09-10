@@ -2,9 +2,6 @@ import io
 import logging
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query
 from fastapi.responses import StreamingResponse
-import zipfile
-from typing import List
-import re
 from app.services.pdf_processor import pdf_processor
 
 router = APIRouter()
@@ -36,7 +33,7 @@ async def split_pdf(
         return StreamingResponse(
             io.BytesIO(result),
             media_type="application/zip",
-            headers={"Content-Disposition": f"attachment; filename=split_pdf_files.zip"}
+            headers={"Content-Disposition": "attachment; filename=split_pdf_files.zip"}
         )
         
     except ValueError as e:
