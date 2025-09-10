@@ -1,7 +1,6 @@
 # --- Core Framework ---
 fastapi
 uvicorn[standard]
-python-cors
 python-multipart
 aiofiles
 
@@ -9,19 +8,17 @@ aiofiles
 pikepdf
 
 # --- Conversion Tools ---
-pdf2docx          # PDF se Word banane ke liye
-python-pptx       # PDF se PowerPoint banane ke liye
-openpyxl          # Excel files likhne ke liye
-camelot-py[cv]    # PDF se tables nikal kar Excel banane ke liye
-pdf2image         # PDF ko images me badalne ke liye
-Pillow            # Images ke saath kaam karne ke liye (bahut zaroori)
+pdf2docx
+python-pptx
+openpyxl
+camelot-py[cv]
+pdf2image
+Pillow
 
 # --- OCR Tool (Image se text nikalne ke liye) ---
 pytesseract
 
 # --- Cloud Storage & Database (Future use) ---
-boto3             # AWS S3 par files store karne ke liye
-SQLAlchemy        # Database ke liye (Admin Panel)
-databases[sqlite] # Database se connect karne ke liye
-
-
+boto3
+SQLAlchemy
+databases[sqlite]
