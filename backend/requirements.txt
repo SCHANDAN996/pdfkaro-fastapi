@@ -1,7 +1,13 @@
-
-
 fastapi
-uvicorn
+uvicorn[standard]
+
+pydantic-settings
+pikepdf
+boto3
+aiofiles
+
+
+
 jinja2
 python-multipart
 aiofiles
