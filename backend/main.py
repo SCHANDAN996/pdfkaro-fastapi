@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 from app.core.config import settings
 from app.api.v1.merge import router as merge_router
-from app.api.v1.split import router as split_router  # Add this import
+from app.api.v1.split import router as split_router
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -26,7 +26,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(merge_router, prefix=settings.API_V1_STR)
-app.include_router(split_router, prefix=settings.API_V1_STR)  # Add this line
+app.include_router(split_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def read_root():
