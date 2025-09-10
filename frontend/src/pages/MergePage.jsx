@@ -13,7 +13,9 @@ const MergePage = () => {
             setError("Only PDF files are accepted. Please try again.");
         } else {
             setError('');
-            setFiles(prevFiles => [...prevFiles, ...pdfFiles]);
+            setFiles(prevFiles => [...prevFiles, ...pdfFiles.map(file => Object.assign(file, {
+                preview: URL.createObjectURL(file)
+            }))]);
         }
     }, []);
 
@@ -41,9 +43,10 @@ const MergePage = () => {
             formData.append('files', file);
         });
 
-        // --- Hamari jasoosi wali line ---
-        const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
-        console.log(`Attempting to merge files. Sending request to: ${apiUrl}/api/v1/merge`);
+        // --- YEH HAMARA FINAL FIX HAI ---
+        // Hum yahan seedhe HTTPS wala URL istemal kar rahe hain
+        const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
+        console.log(`Sending secure request to: ${apiUrl}/api/v1/merge`);
 
         try {
             const response = await fetch(`${apiUrl}/api/v1/merge`, {
@@ -52,7 +55,6 @@ const MergePage = () => {
             });
 
             if (!response.ok) {
-                // Try to get more specific error from backend
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
             }
@@ -66,7 +68,7 @@ const MergePage = () => {
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
-            setFiles([]); // Clear files after successful merge
+            setFiles([]);
 
         } catch (e) {
             console.error("Merge request failed:", e);
