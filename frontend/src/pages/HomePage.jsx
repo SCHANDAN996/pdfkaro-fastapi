@@ -1,5 +1,5 @@
 import React from 'react';
-import { Merge, Scissors, Compress } from 'lucide-react';
+import { Merge, Scissors } from 'lucide-react';
 import ToolCard from '../components/ToolCard';
 
 const HomePage = () => {
@@ -16,23 +16,24 @@ const HomePage = () => {
       description: 'Extract specific pages or split PDF into individual pages.',
       link: '/split'
     },
-    {
-      icon: Compress,
-      title: 'Compress PDF',
-      description: 'Reduce PDF file size without losing quality.',
-      link: '/compress',
-      comingSoon: true
-    },
+    // Remove Compress tool for now
+    // {
+    //   icon: Compress,
+    //   title: 'Compress PDF',
+    //   description: 'Reduce PDF file size without losing quality.',
+    //   link: '/compress',
+    //   comingSoon: true
+    // },
   ];
 
   return (
     <div className="container mx-auto px-6 py-12">
       <div className="text-center max-w-2xl mx-auto">
-        <h1 className="text-5xl font-extrabold text-slate-800">The All-in-One PDF Solution</h1>
-        <p className="mt-4 text-lg text-slate-600">Easily manage your PDF files with our collection of free and simple-to-use tools.</p>
+        <h1 className="text-5xl font-extrabold text-gray-800">The All-in-One PDF Solution</h1>
+        <p className="mt-4 text-lg text-gray-600">Easily manage your PDF files with our collection of free and simple-to-use tools.</p>
       </div>
 
-      <div id="tools" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16 max-w-6xl mx-auto">
+      <div id="tools" className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-16 max-w-4xl mx-auto">
         {tools.map((tool, index) => (
           <ToolCard
             key={index}
@@ -40,7 +41,6 @@ const HomePage = () => {
             title={tool.title}
             description={tool.description}
             link={tool.link}
-            comingSoon={tool.comingSoon}
           />
         ))}
       </div>
