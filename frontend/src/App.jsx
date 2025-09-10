@@ -12,10 +12,13 @@ const SplitPage = lazy(() => import('./pages/SplitPage'));
 const DownloadPage = lazy(() => import('./pages/DownloadPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
+// Remove CompressPage import since it's not ready yet
+// const CompressPage = lazy(() => import('./pages/CompressPage'));
+
 function App() {
   return (
     <Router>
-      <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 font-sans">
+      <div className="flex flex-col min-h-screen bg-gray-50 font-sans">
         <Header />
         
         <main className="flex-grow">
@@ -26,6 +29,8 @@ function App() {
                 <Route path="/merge" element={<MergePage />} />
                 <Route path="/split" element={<SplitPage />} />
                 <Route path="/download" element={<DownloadPage />} />
+                {/* Remove CompressPage route for now */}
+                {/* <Route path="/compress" element={<CompressPage />} /> */}
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
