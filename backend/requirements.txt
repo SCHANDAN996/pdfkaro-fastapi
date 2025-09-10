@@ -1,24 +1,7 @@
-# --- Core Framework ---
-fastapi
-uvicorn[standard]
-python-multipart
-aiofiles
-
-# --- PDF Manipulation Tools (Merge, Split, Compress, etc.) ---
-pikepdf
-
-# --- Conversion Tools ---
-pdf2docx
-python-pptx
-openpyxl
-camelot-py[cv]
-pdf2image
-Pillow
-
-# --- OCR Tool (Image se text nikalne ke liye) ---
-pytesseract
-
-# --- Cloud Storage & Database (Future use) ---
-boto3
-SQLAlchemy
-databases[sqlite]
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+pikepdf==8.3.1
+python-dotenv==1.0.0
+pydantic-settings==2.1.0
+aiofiles==23.2.1
