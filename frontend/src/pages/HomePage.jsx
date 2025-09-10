@@ -1,6 +1,6 @@
 import React from 'react';
-import { Merge, Scissors } from 'lucide-react';
-import ToolCard from '../components/ToolCard.jsx';
+import { Merge, Scissors, Compress } from 'lucide-react';
+import ToolCard from '../components/ToolCard';
 
 const HomePage = () => {
   const tools = [
@@ -13,8 +13,15 @@ const HomePage = () => {
     {
       icon: Scissors,
       title: 'Split PDF',
-      description: 'Extract pages from a PDF.',
-      link: '/split' // This will be created later
+      description: 'Extract specific pages or split PDF into individual pages.',
+      link: '/split'
+    },
+    {
+      icon: Compress,
+      title: 'Compress PDF',
+      description: 'Reduce PDF file size without losing quality.',
+      link: '/compress',
+      comingSoon: true
     },
   ];
 
@@ -25,7 +32,7 @@ const HomePage = () => {
         <p className="mt-4 text-lg text-slate-600">Easily manage your PDF files with our collection of free and simple-to-use tools.</p>
       </div>
 
-      <div id="tools" className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-16 max-w-4xl mx-auto">
+      <div id="tools" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16 max-w-6xl mx-auto">
         {tools.map((tool, index) => (
           <ToolCard
             key={index}
@@ -33,6 +40,7 @@ const HomePage = () => {
             title={tool.title}
             description={tool.description}
             link={tool.link}
+            comingSoon={tool.comingSoon}
           />
         ))}
       </div>
@@ -41,4 +49,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-
