@@ -1,179 +1,256 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, X, File as FileIcon, LoaderCircle } from 'lucide-react';
+import { UploadCloud, X, LoaderCircle, RotateCw, HelpCircle, Star, Lock } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 const MergePage = () => {
-    const [files, setFiles] = useState([]);
+    const [pages, setPages] = useState([]);
+    const [files, setFiles] = useState({});
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('');
     const navigate = useNavigate();
 
-    // --- YEH NAYA FUNCTION HAI THUMBNAIL BANANE KE LIYE ---
-    const generateThumbnail = async (file) => {
-        // Ensure pdfjsLib is loaded
+    const generatePageThumbnails = async (file) => {
+        // PDF.js ka istemal karke har page ka thumbnail banayein
         if (!window.pdfjsLib) {
             console.error("pdf.js library is not loaded.");
-            return null;
+            return [];
         }
-
         const fileReader = new FileReader();
         fileReader.readAsArrayBuffer(file);
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             fileReader.onload = async () => {
                 try {
                     const typedarray = new Uint8Array(fileReader.result);
                     const pdf = await window.pdfjsLib.getDocument(typedarray).promise;
-                    const page = await pdf.getPage(1);
-                    const viewport = page.getViewport({ scale: 0.5 }); // Chhota scale
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-                    resolve(canvas.toDataURL());
+                    const pageThumbnails = [];
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: 0.5 });
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        await page.render({ canvasContext: context, viewport: viewport }).promise;
+                        pageThumbnails.push({
+                            id: `page-${file.name}-${i}-${Date.now()}`,
+                            sourceFile: file.name,
+                            pageIndex: i - 1,
+                            thumbnail: canvas.toDataURL(),
+                            rotation: 0,
+                        });
+                    }
+                    resolve(pageThumbnails);
                 } catch (err) {
-                    console.error('Error generating thumbnail:', err);
-                    resolve(null); // Agar error aaye to null bhejein
+                    console.error('Error generating thumbnails:', err);
+                    resolve([]); // Error hone par khali array bhejein
                 }
-            };
-            fileReader.onerror = (error) => {
-                console.error('File reading error:', error);
-                reject(error);
             };
         });
     };
 
     const onDrop = useCallback(async (acceptedFiles) => {
-        const pdfFiles = acceptedFiles.filter(file => file.type === "application/pdf");
-        if (pdfFiles.length !== acceptedFiles.length) {
-            setError("Only PDF files are accepted. Please try again.");
-            return;
-        }
+        setLoadingMessage('Generating page previews...');
+        setIsLoading(true);
+        const newFiles = { ...files };
+        const newPagesPromises = acceptedFiles.map(file => {
+            newFiles[file.name] = file;
+            return generatePageThumbnails(file);
+        });
         
-        setError('');
-        setIsLoading(true); // Start loading when thumbnail generation begins
+        const allNewPagesNested = await Promise.all(newPagesPromises);
+        const allNewPages = allNewPagesNested.flat();
 
-        // Har file ke liye thumbnail generate karein
-        const filesWithPreviews = await Promise.all(
-            pdfFiles.map(async (file) => {
-                const thumbnail = await generateThumbnail(file);
-                return Object.assign(file, {
-                    id: `file-${Date.now()}-${Math.random()}`,
-                    preview: thumbnail,
-                });
-            })
-        );
-        setFiles(prevFiles => [...prevFiles, ...filesWithPreviews]);
-        setIsLoading(false); // Stop loading after thumbnails are generated
-    }, []);
+        setFiles(newFiles);
+        setPages(p => [...p, ...allNewPages]);
+        setIsLoading(false);
+        setLoadingMessage('');
+    }, [files]);
 
     const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'application/pdf': ['.pdf'] } });
-    const removeFile = (fileId) => setFiles(files.filter(file => file.id !== fileId));
+
+    const handleRotate = (pageId) => {
+        setPages(pages.map(p => p.id === pageId ? { ...p, rotation: (p.rotation + 90) % 360 } : p));
+    };
+    
+    const handleRemovePage = (pageId) => {
+        setPages(pages.filter(p => p.id !== pageId));
+    };
 
     const handleOnDragEnd = (result) => {
         if (!result.destination) return;
-        const items = Array.from(files);
+        const items = Array.from(pages);
         const [reorderedItem] = items.splice(result.source.index, 1);
         items.splice(result.destination.index, 0, reorderedItem);
-        setFiles(items);
-    }
+        setPages(items);
+    };
 
     const handleMerge = async () => {
-        if (files.length < 1) {
-            setError("Please select at least one PDF file.");
+        if (pages.length < 1) {
+            setError("Please upload at least one PDF file.");
             return;
         }
+        setLoadingMessage('Merging your pages...');
         setIsLoading(true);
+
         const formData = new FormData();
-        files.forEach(file => formData.append('files', file));
+        const pagesData = pages.map(({ sourceFile, pageIndex, rotation }) => ({ sourceFile, pageIndex, rotation }));
+        formData.append('pages_data', JSON.stringify(pagesData));
+        
+        const uniqueFiles = new Set(pages.map(p => p.sourceFile));
+        uniqueFiles.forEach(fileName => {
+            formData.append('files', files[fileName]);
+        });
+
         const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
         try {
             const response = await fetch(`${apiUrl}/api/v1/merge`, { method: 'POST', body: formData });
-            if (!response.ok) throw new Error(`Server error: ${response.statusText}`);
+            if (!response.ok) {
+                 const err = await response.json();
+                 throw new Error(err.detail || 'Server error');
+            }
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             navigate('/download', { state: { downloadUrl: url, fileName: 'merged_by_PDFkaro.in.pdf', sourceTool: 'merge' } });
         } catch (e) {
             setError(`Failed to merge PDFs. Error: ${e.message}`);
+        } finally {
             setIsLoading(false);
+            setLoadingMessage('');
         }
     };
 
-    if (isLoading && files.length === 0) { // Initial loading for thumbnail generation
+    // Processing screen
+    if (isLoading) {
         return (
             <div className="flex flex-col items-center justify-center text-center h-96">
                 <LoaderCircle className="animate-spin text-slate-700" size={64} />
-                <h2 className="mt-6 text-2xl font-bold text-slate-800">Processing files...</h2>
-                <p className="mt-2 text-slate-600">Generating previews, please wait.</p>
+                <h2 className="mt-6 text-2xl font-bold text-slate-800">{loadingMessage}</h2>
+                <p className="mt-2 text-slate-600">Please wait, this might take a moment.</p>
             </div>
         );
     }
-
+    
     return (
-        <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8">
-            <div className="text-center mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">Merge PDF Files</h1>
-                <p className="text-slate-600 mt-2">Combine and reorder PDFs with visual previews.</p>
+        <>
+            <div className="w-full max-w-6xl mx-auto p-4">
+                <div className="text-center mb-8">
+                    {/* SEO: H1 Tag - Yeh page ka sabse zaroori heading hai */}
+                    <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">Merge PDF Files Online - Free PDF Combiner</h1>
+                    <p className="text-slate-600 mt-2 max-w-2xl mx-auto">Easily combine multiple PDF files into one. Drag, drop, rotate, and arrange every page exactly how you want. Free, fast, and secure.</p>
+                </div>
+                
+                {pages.length === 0 && (
+                     <div {...getRootProps()} className="p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors border-slate-300 hover:border-slate-400">
+                        <input {...getInputProps()} />
+                        <div className="flex flex-col items-center justify-center text-slate-500">
+                            <UploadCloud size={48} className="mb-4 text-slate-400" />
+                            <p className="text-lg font-semibold">Drag & drop PDF files here, or click to select</p>
+                        </div>
+                    </div>
+                )}
+                
+                {error && <div className="mt-4 text-center text-red-600 bg-red-100 p-3 rounded-lg">{error}</div>}
+                
+                {pages.length > 0 && (
+                    <div>
+                        <DragDropContext onDragEnd={handleOnDragEnd}>
+                            <Droppable droppableId="pages">
+                                {(provided) => (
+                                    <div {...provided.droppableProps} ref={provided.innerRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4 bg-slate-100 rounded-lg">
+                                        {pages.map((page, index) => (
+                                            <Draggable key={page.id} draggableId={page.id} index={index}>
+                                                {(provided) => (
+                                                    <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
+                                                        <img src={page.thumbnail} alt={`Page ${page.pageIndex + 1} from ${page.sourceFile}`} className="w-full h-full object-contain rounded-lg transition-transform" style={{ transform: `rotate(${page.rotation}deg)` }} />
+                                                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-50 transition-opacity flex items-center justify-center rounded-lg gap-2">
+                                                            <button onClick={() => handleRotate(page.id)} className="p-2 bg-white rounded-full text-slate-700 hover:bg-slate-200 opacity-0 group-hover:opacity-100 transition-all" title="Rotate Page">
+                                                                <RotateCw size={18} />
+                                                            </button>
+                                                            <button onClick={() => handleRemovePage(page.id)} className="p-2 bg-white rounded-full text-slate-700 hover:bg-red-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all" title="Remove Page">
+                                                                <X size={18} />
+                                                            </button>
+                                                        </div>
+                                                        <span className="absolute bottom-1 right-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{index + 1}</span>
+                                                    </div>
+                                                )}
+                                            </Draggable>
+                                        ))}
+                                        {provided.placeholder}
+                                    </div>
+                                )}
+                            </Droppable>
+                        </DragDropContext>
+                        <div className="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+                            <div {...getRootProps()} className="w-full sm:w-auto">
+                               <button className="w-full sm:w-auto border-2 border-slate-700 text-slate-700 font-bold py-3 px-8 rounded-lg hover:bg-slate-100 transition-colors">Add More Files</button>
+                               <input {...getInputProps()} className="hidden"/>
+                            </div>
+                            <button onClick={handleMerge} className="w-full sm:w-auto bg-slate-700 text-white font-bold py-3 px-12 rounded-lg hover:bg-slate-800 transition-transform">Merge PDFs</button>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {files.length === 0 && (
-                 <div {...getRootProps()} className="p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors duration-300 border-slate-300 hover:border-slate-400">
-                    <input {...getInputProps()} />
-                    <div className="flex flex-col items-center justify-center text-slate-500">
-                        <UploadCloud size={48} className="mb-4 text-slate-400" />
-                        <p className="text-lg font-semibold">Drag & drop files here, or click to select files</p>
+            {/* --- SEO CONTENT SECTION --- */}
+            <div className="w-full max-w-4xl mx-auto p-4 mt-16 text-slate-700">
+                
+                {/* SEO: H2 Tag - Yeh ek important subheading hai */}
+                <h2 className="text-2xl font-bold text-slate-800 mb-4">How to Merge PDF files with PDFkaro.in</h2>
+                <div className="prose max-w-none">
+                    {/* HOMEWORK: Yahan aapko step-by-step guide likhni hai */}
+                    <p>Merging PDFs has never been easier. Follow these simple steps:</p>
+                    <ol>
+                        <li>Click the 'Drag & drop PDF files here' area to upload your documents.</li>
+                        <li>You will see a preview of every page from your uploaded PDFs.</li>
+                        <li>Drag and drop the pages to arrange them in your desired order.</li>
+                        <li>Hover over any page and click the rotate icon to adjust its orientation.</li>
+                        <li>Once you are satisfied, click the 'Merge PDFs' button. Your combined PDF will be ready in seconds!</li>
+                    </ol>
+                </div>
+                
+                <h2 className="text-2xl font-bold text-slate-800 mt-12 mb-4">Frequently Asked Questions (FAQ)</h2>
+                <div className="space-y-4">
+                    <div>
+                        <h3 className="font-semibold">Is it free to merge PDFs on PDFkaro.in?</h3>
+                        {/* HOMEWORK: Yahan aapko jawab likhna hai */}
+                        <p>Yes, our PDF merging tool is completely free to use. There are no hidden charges, watermarks, or limits on the number of files you can merge.</p>
+                    </div>
+                    <div>
+                        <h3 className="font-semibold">How to combine different files like JPG and Word to PDF? (PDF jodne wala tool)</h3>
+                        {/* HOMEWORK: Yahan aapko jawab likhna hai */}
+                        <p>Our tool is specialized for merging existing PDF files. We are actively developing new tools to let you convert and merge different file types like JPG, PNG, and Word directly. Stay tuned!</p>
+                    </div>
+                     <div>
+                        <h3 className="font-semibold">Is my data safe when I murge PDF files?</h3>
+                        {/* HOMEWORK: Yahan aapko jawab likhna hai. Maine "murge" spelling use ki hai. */}
+                        <p>Absolutely. We prioritize your privacy. We use secure connections (SSL) for all file transfers, and our system automatically deletes all uploaded files from our servers after one hour. Your data is never stored or shared.</p>
                     </div>
                 </div>
-            )}
-           
-            {error && <div className="mt-4 text-center text-red-600 bg-red-100 p-3 rounded-lg">{error}</div>}
 
-            {files.length > 0 && (
-                <div className="mt-8">
-                    <DragDropContext onDragEnd={handleOnDragEnd}>
-                        <Droppable droppableId="files" direction="horizontal">
-                            {(provided) => (
-                                <div {...provided.droppableProps} ref={provided.innerRef} className="flex gap-4 p-4 overflow-x-auto bg-slate-100 rounded-lg min-h-[16rem] items-center">
-                                    {files.map((file, index) => (
-                                        <Draggable key={file.id} draggableId={file.id} index={index}>
-                                            {(provided) => (
-                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="relative flex-shrink-0 w-40 h-56 bg-white rounded-lg shadow-md border border-slate-200 group transition-transform hover:scale-105">
-                                                    {file.preview ? (
-                                                        <img src={file.preview} alt={file.name} className="w-full h-full object-contain rounded-t-lg p-2" />
-                                                    ) : (
-                                                        <div className="flex items-center justify-center h-full">
-                                                          <FileIcon className="w-16 h-16 text-slate-300" />
-                                                        </div>
-                                                    )}
-                                                    <p className="absolute bottom-0 left-0 right-0 p-2 text-xs text-center text-white bg-black bg-opacity-60 rounded-b-lg truncate">{file.name}</p>
-                                                    <button onClick={() => removeFile(file.id)} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600">
-                                                        <X size={16} />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </Draggable>
-                                    ))}
-                                    {provided.placeholder}
-                                    <div {...getRootProps()} className="flex-shrink-0 w-40 h-56 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-slate-500 cursor-pointer hover:bg-slate-200 hover:border-slate-400">
-                                        <input {...getInputProps()} />
-                                        <UploadCloud size={32} />
-                                        <span className="mt-2 text-sm text-center">Add more files</span>
-                                    </div>
-                                </div>
-                            )}
-                        </Droppable>
-                    </DragDropContext>
-
-                    <div className="mt-8 flex justify-center">
-                        <button onClick={handleMerge} disabled={isLoading} className="w-full sm:w-auto bg-slate-700 text-white font-bold py-3 px-12 rounded-lg hover:bg-slate-800 transition-transform disabled:bg-slate-400">
-                            {isLoading ? <LoaderCircle className="animate-spin" /> : 'Merge PDFs'}
-                        </button>
+                <h2 className="text-2xl font-bold text-slate-800 mt-12 mb-4">Why Our PDF Combiner is The Best</h2>
+                 <div className="grid md:grid-cols-3 gap-8">
+                    <div className="text-center">
+                        <Star className="mx-auto text-slate-500 mb-2" size={32}/>
+                        <h3 className="font-semibold">Full Page Control</h3>
+                        <p className="text-sm">Don't just merge files, manage pages. See a preview of every single page, rotate them, and arrange them exactly as you need before you combine.</p>
+                    </div>
+                    <div className="text-center">
+                        <Lock className="mx-auto text-slate-500 mb-2" size={32}/>
+                        <h3 className="font-semibold">Secure & Private</h3>
+                        <p className="text-sm">Your files are for your eyes only. All processing is done securely, and we automatically delete everything from our servers.</p>
+                    </div>
+                    <div className="text-center">
+                        <HelpCircle className="mx-auto text-slate-500 mb-2" size={32}/>
+                        <h3 className="font-semibold">Completely Free</h3>
+                        <p className="text-sm">Enjoy unlimited PDF merging without any watermarks or hidden costs. It's free, and it will always be.</p>
                     </div>
                 </div>
-            )}
-        </div>
+
+            </div>
+        </>
     );
 };
 
