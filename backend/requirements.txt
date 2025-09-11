@@ -1,0 +1,24 @@
+# --- Core Framework ---
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles
+
+# --- PDF Manipulation Tools (Merge, Split, Compress, etc.) ---
+pikepdf
+
+# --- Conversion Tools ---
+pdf2docx
+python-pptx
+openpyxl
+camelot-py[cv]
+pdf2image
+Pillow
+
+# --- OCR Tool (Image se text nikalne ke liye) ---
+pytesseract
+
+# --- Cloud Storage & Database (Future use) ---
+boto3
+SQLAlchemy
+databases[sqlite]
