@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* YEH MOBILE DRAG-DROP KO SMOOTH BANAYEGA */
+/* Yeh mobile par drag-drop ko smooth banayega */
 [data-rbd-draggable-id] {
   touch-action: none;
 }
