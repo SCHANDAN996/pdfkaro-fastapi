@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
 import { UploadCloud, CheckCircle2, LoaderCircle, Scissors, FileDown } from 'lucide-react';
@@ -57,6 +57,7 @@ const SplitPage = () => {
 
     const handlePageSelect = (pageIndex, event) => {
         const newSelectedPages = new Set(selectedPages);
+        // Shift-click logic for range selection
         if (event.shiftKey && lastSelected !== null) {
             const start = Math.min(lastSelected, pageIndex);
             const end = Math.max(lastSelected, pageIndex);
@@ -81,6 +82,7 @@ const SplitPage = () => {
         const formData = new FormData();
         formData.append('file', file);
         
+        // Agar 'extract' hai to chune hue pages ki list bhejein
         const pagesToExtract = actionType === 'extract' ? Array.from(selectedPages) : [];
         formData.append('pages_to_extract', JSON.stringify(pagesToExtract));
 
