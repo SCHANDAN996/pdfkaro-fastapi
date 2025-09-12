@@ -1,127 +1,140 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Download, Share2, Trash2, ArrowLeft, RefreshCw, Lock, FileArchive, Scissors } from 'lucide-react';
+import { Download, Share2, ArrowLeft, LoaderCircle, File as FileIcon } from 'lucide-react';
+
+// Helper function to convert Base64 back to Blob
+const base64ToBlob = (base64, type) => {
+    const byteCharacters = atob(base64.split(',')[1]);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    return new Blob([byteArray], { type });
+};
 
 const DownloadPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
     
-    // State se data nikalein
-    const downloadUrl = location.state?.downloadUrl;
-    const fileName = location.state?.fileName || "downloaded_by_PDFkaro.in.pdf";
-    const sourceTool = location.state?.sourceTool || 'merge';
+    // Data from previous page
+    const { sourceTool, downloadUrl, zipUrl, originalFile, fileName } = location.state || {};
     
-    const [shareError, setShareError] = useState('');
+    const [pagePreviews, setPagePreviews] = useState([]);
+    const [isLoading, setIsLoading] = useState(sourceTool === 'split');
+
+    const generateThumbnails = useCallback(async () => {
+        if (!originalFile || !window.pdfjsLib) return;
+        
+        const blob = base64ToBlob(originalFile.data, 'application/pdf');
+        const arrayBuffer = await blob.arrayBuffer();
+        const typedarray = new Uint8Array(arrayBuffer);
+
+        const pdf = await window.pdfjsLib.getDocument(typedarray).promise;
+        const thumbnails = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 0.3 });
+            const canvas = document.createElement('canvas');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            const context = canvas.getContext('2d');
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            thumbnails.push({ id: `page-${i}`, pageIndex: i - 1, thumbnail: canvas.toDataURL() });
+        }
+        setPagePreviews(thumbnails);
+        setIsLoading(false);
+    }, [originalFile]);
 
     useEffect(() => {
-        if (!downloadUrl) {
+        if (sourceTool === 'split') {
+            generateThumbnails();
+        }
+    }, [sourceTool, generateThumbnails]);
+
+    useEffect(() => {
+        if (!downloadUrl && !zipUrl) {
             navigate('/');
         }
-    }, [downloadUrl, navigate]);
+        return () => { // Cleanup
+            if(downloadUrl) URL.revokeObjectURL(downloadUrl);
+            if(zipUrl) URL.revokeObjectURL(zipUrl);
+        }
+    }, [downloadUrl, zipUrl, navigate]);
+    
+    const handleSinglePageDownload = async (pageIndex) => {
+        const blob = base64ToBlob(originalFile.data, 'application/pdf');
+        const formData = new FormData();
+        formData.append('file', blob, originalFile.name);
+        formData.append('page_number', pageIndex);
 
-    useEffect(() => {
-        return () => {
-            if (downloadUrl) {
-                URL.revokeObjectURL(downloadUrl);
-            }
-        };
-    }, [downloadUrl]);
+        const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
+        const response = await fetch(`${apiUrl}/api/v1/extract-single-page`, { method: 'POST', body: formData });
 
-    // --- YEH NAYA FUNCTION HAI WHATSAPP SHARE KE LIYE ---
-    const handleShare = async () => {
-        setShareError('');
-        // Pehle check karein ki browser Web Share API support karta hai ya nahi
-        if (navigator.share && navigator.canShare) {
-            try {
-                // Download URL se file ka data (blob) dobara hasil karein
-                const response = await fetch(downloadUrl);
-                const blob = await response.blob();
-
-                // Blob se ek File object banayein
-                const fileToShare = new File([blob], fileName, { type: blob.type });
-
-                // Check karein ki kya browser is file ko share kar sakta hai
-                if (navigator.canShare({ files: [fileToShare] })) {
-                    await navigator.share({
-                        files: [fileToShare],
-                        title: `My File from PDFkaro.in`,
-                        text: `Here is the document processed with PDFkaro.in: ${fileName}`,
-                    });
-                } else {
-                    setShareError("Your browser doesn't support sharing this file type.");
-                }
-            } catch (error) {
-                console.error('Error sharing:', error);
-                // Agar user share cancel karta hai to error na dikhayein
-                if (error.name !== 'AbortError') {
-                    setShareError('Could not share the file. Please try downloading it instead.');
-                }
-            }
-        } else {
-            // Desktop users ke liye message
-            setShareError("Sharing is available on mobile browsers. Please download the file to share it from your desktop.");
+        if(response.ok) {
+            const newBlob = await response.blob();
+            const url = URL.createObjectURL(newBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `page_${pageIndex+1}_by_PDFkaro.in.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
         }
     };
-    
-    if (!downloadUrl) {
-        return null;
+
+    if (isLoading) {
+         return <div className="text-center h-96 flex flex-col justify-center items-center"><LoaderCircle className="animate-spin" size={48} /><p className="mt-4">Generating page previews...</p></div>
     }
 
-    const isFromMerge = sourceTool === 'merge';
-
-    return (
-        <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 md:p-8 text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">
-                {isFromMerge ? 'Your PDFs have been merged!' : 'Your PDF has been split!'}
-            </h1>
-            <p className="text-slate-600 mt-2 mb-8">Your file is ready. Share it or download it below.</p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <a
-                    href={downloadUrl}
-                    download={fileName}
-                    className="inline-flex items-center justify-center w-full sm:w-auto bg-slate-700 text-white font-bold py-4 px-10 rounded-lg text-lg hover:bg-slate-800 transition-transform duration-200 ease-in-out hover:scale-105"
-                >
-                    <Download className="mr-3" />
-                    Download
+    // Merge Tool Download Page
+    if (sourceTool === 'merge') {
+        return (
+            <div className="w-full max-w-4xl mx-auto p-4 text-center">
+                 <h1 className="text-3xl sm:text-4xl font-bold">Your PDFs have been merged!</h1>
+                 <p className="mt-2 mb-8 text-slate-600">Your file is ready to download.</p>
+                 <a href={downloadUrl} download={fileName} className="inline-flex items-center justify-center bg-slate-700 text-white font-bold py-4 px-16 rounded-lg text-lg hover:bg-slate-800">
+                    <Download className="mr-3" /> Download Merged PDF
                 </a>
-                <button
-                    onClick={handleShare}
-                    className="inline-flex items-center justify-center w-full sm:w-auto bg-green-500 text-white font-bold py-4 px-10 rounded-lg text-lg hover:bg-green-600 transition-transform duration-200 ease-in-out hover:scale-105"
-                >
-                    <Share2 className="mr-3" />
-                    Share
-                </button>
-            </div>
-            
-            {shareError && <p className="text-sm text-slate-500 mt-4">{shareError}</p>}
-            
-            <div className="mt-12">
-                 <Link to={isFromMerge ? '/merge' : '/split'} className="inline-flex items-center text-slate-600 hover:text-slate-800 font-semibold">
-                    <ArrowLeft className="mr-2" size={20} />
-                    Back to {isFromMerge ? 'Merge' : 'Split'}
-                </Link>
-            </div>
-
-            <div className="mt-16 p-6 bg-slate-50 rounded-lg border border-slate-200">
-                <h2 className="text-xl font-bold text-slate-700 mb-4">Continue to...</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    <Link to="/compress" className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        <FileArchive className="text-slate-500 mr-4" />
-                        <span className="font-semibold text-slate-800">Compress PDF</span>
-                    </Link>
-                     <Link to={isFromMerge ? '/split' : '/merge'} className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        {isFromMerge ? <Scissors className="text-slate-500 mr-4" /> : <RefreshCw className="text-slate-500 mr-4" />}
-                        <span className="font-semibold text-slate-800">{isFromMerge ? 'Split PDF' : 'Merge PDFs'}</span>
-                    </Link>
-                     <Link to="/protect" className="flex items-center p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
-                        <Lock className="text-slate-500 mr-4" />
-                        <span className="font-semibold text-slate-800">Protect PDF</span>
-                    </Link>
+                 <div className="mt-12">
+                     <Link to="/merge" className="inline-flex items-center font-semibold"><ArrowLeft className="mr-2" size={20} />Back to Merge</Link>
                 </div>
             </div>
-        </div>
-    );
+        );
+    }
+
+    // Split Tool Download Page (Advanced)
+    if (sourceTool === 'split') {
+        return (
+            <div className="w-full max-w-6xl mx-auto p-4">
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl sm:text-4xl font-bold">Your PDF has been split!</h1>
+                    <p className="mt-2 text-slate-600">Download all pages in a ZIP file, or download individual pages below.</p>
+                    <a href={zipUrl} download="split_pages_by_PDFkaro.in.zip" className="mt-4 inline-flex items-center justify-center bg-slate-700 text-white font-bold py-3 px-10 rounded-lg text-lg hover:bg-slate-800">
+                        <Download className="mr-3" /> Download All Pages (ZIP)
+                    </a>
+                </div>
+                
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4 bg-slate-100 rounded-lg">
+                    {pagePreviews.map(page => (
+                        <div key={page.id} className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
+                            <img src={page.thumbnail} alt={`Page ${page.pageIndex + 1}`} className="w-full h-full object-contain rounded-lg"/>
+                             <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-50 transition-opacity flex items-center justify-center rounded-lg">
+                                <button onClick={() => handleSinglePageDownload(page.pageIndex)} className="p-2 bg-white rounded-full text-slate-700 opacity-0 group-hover:opacity-100" title="Download this page">
+                                    <Download size={20} />
+                                </button>
+                            </div>
+                            <span className="absolute bottom-1 right-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{page.pageIndex + 1}</span>
+                        </div>
+                    ))}
+                </div>
+                 <div className="mt-12 text-center">
+                     <Link to="/split" className="inline-flex items-center font-semibold"><ArrowLeft className="mr-2" size={20} />Back to Split</Link>
+                </div>
+            </div>
+        )
+    }
+
+    return <div>Something went wrong. <Link to="/">Go Home</Link></div>;
 };
 
 export default DownloadPage;
