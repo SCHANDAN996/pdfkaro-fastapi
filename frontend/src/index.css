@@ -2,8 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: 'Roboto', 'Open Sans', sans-serif;
+/* YEH MOBILE DRAG-DROP KO SMOOTH BANAYEGA */
+[data-rbd-draggable-id] {
+  touch-action: none;
 }
-
-
