@@ -4,7 +4,8 @@ import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
 import HomePage from './pages/HomePage.jsx';
 import MergePage from './pages/MergePage.jsx';
-import DownloadPage from './pages/DownloadPage.jsx'; // Naya page import karein
+import DownloadPage from './pages/DownloadPage.jsx';
+import SplitPage from './pages/SplitPage.jsx'; // SplitPage ko import karein
 
 function App() {
   return (
@@ -15,8 +16,9 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/merge" element={<MergePage />} />
-            <Route path="/download" element={<DownloadPage />} /> {/* Naya route jodein */}
-            {/* Yahan future me aur routes (split, compress, etc.) aayenge */}
+            <Route path="/split" element={<SplitPage />} /> {/* SplitPage ka route jodein */}
+            <Route path="/download" element={<DownloadPage />} />
+            {/* Yahan future me aur routes (compress, etc.) aayenge */}
           </Routes>
         </main>
         <Footer />
@@ -26,4 +28,5 @@ function App() {
 }
 
 export default App;
+
 
