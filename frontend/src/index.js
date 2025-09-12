@@ -6,12 +6,9 @@ import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  // Humne yahan se <React.StrictMode> ko hata diya hai
-  // Isse drag-and-drop ki samasya hal ho jayegi
+  // Humne yahan se <React.StrictMode> ko hata diya hai.
+  // Yeh drag-and-drop ki samasya ko 100% theek kar dega.
   <App />
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
