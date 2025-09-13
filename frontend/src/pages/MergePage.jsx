@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, X, File as FileIcon, LoaderCircle } from 'lucide-react';
+import { UploadCloud, X, File as FileIcon, LoaderCircle, RotateCw } from 'lucide-react'; // RotateCw ko yahan import kiya gaya hai
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 
 // Helper function to wait for pdf.js to be ready
@@ -59,7 +59,6 @@ const MergePage = () => {
     }, []);
 
     const onDrop = useCallback(async (acceptedFiles) => {
-        // ... (onDrop logic remains the same)
         setLoadingMessage('Generating page previews...');
         setIsLoading(true);
         const newFiles = { ...files };
@@ -75,7 +74,6 @@ const MergePage = () => {
         setLoadingMessage('');
     }, [files, generatePageThumbnails]);
     
-    // ... (rest of the component remains the same)
     const { getRootProps, getInputProps } = useDropzone({ onDrop, accept: { 'application/pdf': ['.pdf'] } });
 
     const handleRotate = (pageId) => {
@@ -132,7 +130,6 @@ const MergePage = () => {
     
     return (
         <div className="w-full max-w-6xl mx-auto p-4">
-             {/* ... UI remains the same ... */}
              <div className="text-center mb-8">
                 <h1 className="text-3xl sm:text-4xl font-bold text-slate-800">Merge PDF Files</h1>
                 <p className="text-slate-600 mt-2">Combine and reorder pages from multiple PDFs.</p>
