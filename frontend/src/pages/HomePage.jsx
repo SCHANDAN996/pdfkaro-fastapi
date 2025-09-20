@@ -1,5 +1,5 @@
 import React from 'react';
-import { Merge, Scissors, FolderGit2, FileArchive } from 'lucide-react';
+import { Merge, Scissors, FileArchive, FolderGit2 } from 'lucide-react';
 import ToolCard from '../components/ToolCard.jsx';
 
 const HomePage = () => {
@@ -21,7 +21,7 @@ const HomePage = () => {
                 {tools.map((tool) => (
                     <ToolCard
                         key={tool.key}
-                        icon={tool.icon}  // <-- बदलाव यहाँ है
+                        icon={tool.icon}
                         title={tool.title}
                         description={tool.description}
                         link={tool.link}
