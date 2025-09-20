@@ -11,55 +11,48 @@ const ProjectExporterPage = () => {
     const [loadingMessage, setLoadingMessage] = useState('');
     const [error, setError] = useState('');
 
-    const onDrop = useCallback((acceptedFiles, fileRejections, event) => {
+    const onDrop = useCallback((acceptedFiles) => {
+        if (!acceptedFiles || acceptedFiles.length === 0) {
+            return;
+        }
+
         setLoadingMessage('Reading folder/files...');
         setIsLoading(true);
         setError('');
-        const droppedItems = event.dataTransfer.items;
-        const filePromises = [];
-        
-        const traverseFileTree = (item, path = '') => {
-            return new Promise(resolve => {
-                if (item.isFile) {
-                    item.file(file => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            resolve([{ path: `${path}${file.name}`, content: e.target.result }]);
-                        };
-                        reader.onerror = () => resolve([]);
-                        reader.readAsText(file);
+
+        const filePromises = acceptedFiles.map(file => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    resolve({
+                        path: file.webkitRelativePath || file.name,
+                        content: reader.result
                     });
-                } else if (item.isDirectory) {
-                    const dirReader = item.createReader();
-                    dirReader.readEntries(async (entries) => {
-                        const nestedPromises = entries.map(entry => traverseFileTree(entry, `${path}${item.name}/`));
-                        const nestedFiles = await Promise.all(nestedPromises);
-                        resolve(nestedFiles.flat());
-                    });
-                } else {
-                    resolve([]);
-                }
+                };
+                reader.onerror = () => {
+                    // Ignore non-readable files (like binary images) and resolve with null
+                    resolve(null);
+                };
+                reader.readAsText(file);
             });
-        };
-
-        if (droppedItems) {
-            for (let i = 0; i < droppedItems.length; i++) {
-                const item = droppedItems[i].webkitGetAsEntry();
-                if (item) filePromises.push(traverseFileTree(item));
-            }
-        }
-
-        Promise.all(filePromises).then(allFilesNested => {
-            const allFiles = allFilesNested.flat();
-            if (allFiles.length === 0) {
-                setError("Could not read any text files from the selected folder.");
-            }
-            setFiles(allFiles);
-            setIsLoading(false);
-        }).catch(err => {
-            setError("Could not read the folder. Please try again.");
-            setIsLoading(false);
         });
+
+        Promise.all(filePromises)
+            .then(results => {
+                const validFiles = results.filter(file => file !== null && file.path);
+                if (validFiles.length === 0) {
+                    setError("Could not read any text files. Please select a folder with code/text files.");
+                }
+                setFiles(validFiles);
+            })
+            .catch(err => {
+                setError("An error occurred while reading files.");
+                console.error(err);
+            })
+            .finally(() => {
+                setIsLoading(false);
+                setLoadingMessage('');
+            });
     }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
@@ -89,8 +82,10 @@ const ProjectExporterPage = () => {
             const a = document.createElement('a');
             a.href = url;
             a.download = `project_export_by_PDFkaro.in.${outputFormat}`;
+            document.body.appendChild(a);
             a.click();
-            URL.revokeObjectURL(url);
+            a.remove();
+            window.URL.revokeObjectURL(url);
             setFiles([]);
         } catch (e) {
             setError(`Conversion failed: ${e.message}`);
@@ -110,20 +105,22 @@ const ProjectExporterPage = () => {
                 <p className="text-slate-600 mt-2">Drag & drop a folder to convert its entire structure and content into a single file.</p>
             </div>
 
-            {files.length === 0 ? (
-                <div {...getRootProps()} className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragActive ? 'border-slate-700 bg-slate-100' : 'border-slate-400'}`}>
-                    <input {...getInputProps()} webkitdirectory="" mozdirectory="" />
-                    <UploadCloud size={48} className="mx-auto mb-4 text-slate-400" />
-                    <p className="font-semibold">Drag & drop a folder here</p>
-                    <p className="text-sm text-slate-500 mt-1">(Or click to select a folder)</p>
-                </div>
-            ) : (
-                <div className="text-center p-6 bg-slate-100 rounded-lg">
-                    <Folder className="mx-auto text-slate-700 mb-2" size={32} />
-                    <p className="text-xl font-semibold text-slate-800">{files.length} text files ready to be processed.</p>
-                    <button onClick={() => setFiles([])} className="mt-2 text-sm text-red-500 hover:underline">Clear</button>
-                </div>
-            )}
+            <div {...getRootProps()} className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragActive ? 'border-slate-700 bg-slate-100' : 'border-slate-400'}`}>
+                <input {...getInputProps()} webkitdirectory="" mozdirectory="" />
+                {files.length === 0 ? (
+                    <>
+                        <UploadCloud size={48} className="mx-auto mb-4 text-slate-400" />
+                        <p className="font-semibold">Drag & drop a folder here</p>
+                        <p className="text-sm text-slate-500 mt-1">(Or click to select a folder)</p>
+                    </>
+                ) : (
+                    <div className="text-center">
+                        <Folder className="mx-auto text-slate-700 mb-2" size={32} />
+                        <p className="text-xl font-semibold text-slate-800">{files.length} text files ready to be processed.</p>
+                        <button onClick={(e) => { e.stopPropagation(); setFiles([]); }} className="mt-2 text-sm text-red-500 hover:underline">Clear</button>
+                    </div>
+                )}
+            </div>
             
             {error && <div className="mt-4 text-center text-red-600 bg-red-100 p-3 rounded-lg">{error}</div>}
 
