@@ -1,12 +1,12 @@
 import React from 'react';
-import { Merge, Scissors, FileArchive, FolderGit2 } from 'lucide-react';
+import { Merge, Scissors, FolderGit2, FileArchive } from 'lucide-react';
 import ToolCard from '../components/ToolCard.jsx';
 
 const HomePage = () => {
     const tools = [
         { icon: Merge, title: 'Merge PDF', description: 'Combine multiple PDFs and pages.', link: '/merge', key: 'merge' },
         { icon: Scissors, title: 'Split & Extract PDF', description: 'Extract pages from a PDF.', link: '/split', key: 'split' },
-        { icon: FolderGit2, title: 'Project Exporter', description: 'Export a whole folder\'s content into a single file.', link: '/project-exporter', key: 'export' },
+        { icon: FolderGit2, title: 'Project Exporter', description: 'Export a folder\'s content into a single TXT/Word file.', link: '/project-exporter', key: 'export' },
         { icon: FileArchive, title: 'Compress PDF', description: 'Reduce the size of your PDF file.', link: '#', key: 'compress' },
     ];
 
@@ -21,7 +21,7 @@ const HomePage = () => {
                 {tools.map((tool) => (
                     <ToolCard
                         key={tool.key}
-                        icon={<tool.icon size={32} className="text-slate-500" />}
+                        icon={tool.icon}  // <-- बदलाव यहाँ है
                         title={tool.title}
                         description={tool.description}
                         link={tool.link}
