@@ -4,10 +4,14 @@ uvicorn[standard]
 python-multipart
 aiofiles
 
-# --- PDF Manipulation Tools (Merge, Split, Compress, etc.) ---
+# --- PDF Manipulation Tools ---
 pikepdf
 
-# --- Conversion Tools ---
+# --- Project Exporter Tool ---
+python-docx
+pydantic
+
+# --- Future Conversion Tools ---
 pdf2docx
 python-pptx
 openpyxl
@@ -15,10 +19,5 @@ camelot-py[cv]
 pdf2image
 Pillow
 
-# --- OCR Tool (Image se text nikalne ke liye) ---
+# --- Future OCR Tool ---
 pytesseract
-
-# --- Cloud Storage & Database (Future use) ---
-boto3
-SQLAlchemy
-databases[sqlite]
