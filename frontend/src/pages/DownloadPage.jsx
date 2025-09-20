@@ -66,6 +66,13 @@ const DownloadPage = () => {
                 await page.render({ canvasContext: context, viewport: viewport }).promise;
                 thumbnails.push({ id: `page-${i}`, pageIndex: i - 1, thumbnail: canvas.toDataURL() });
             }
+
+            // --- नया बदलाव यहाँ है ---
+            if (thumbnails.length === 0 && pdf.numPages > 0) {
+                throw new Error("Failed to render any page previews from the PDF.");
+            }
+            // --- बदलाव समाप्त ---
+            
             setPagePreviews(thumbnails);
         } catch (err) {
             console.error("Error generating thumbnails:", err);
@@ -84,16 +91,10 @@ const DownloadPage = () => {
              }
         }
     }, [sourceTool, originalFile, generateThumbnails, downloadUrl, zipUrl, navigate]);
-
-    useEffect(() => {
-        return () => {
-            if(downloadUrl) URL.revokeObjectURL(downloadUrl);
-            if(zipUrl) URL.revokeObjectURL(zipUrl);
-        }
-    }, [downloadUrl, zipUrl]);
+    
+    // ... (बाकी का कोड वही रहेगा)
     
     const handleSinglePageDownload = async (pageIndex) => {
-        // ... (This function remains unchanged from original)
         const blob = base64ToBlob(originalFile.data, 'application/pdf');
         const formData = new FormData();
         formData.append('file', blob, originalFile.name);
@@ -144,7 +145,7 @@ const DownloadPage = () => {
                 {isLoading ? (
                      <div className="text-center h-64 flex flex-col justify-center items-center"><LoaderCircle className="animate-spin" size={48} /><p className="mt-4">Generating page previews...</p></div>
                 ) : error ? (
-                    <div className="p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-lg flex items-center gap-3">
+                    <div className="p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-lg flex items-center gap-3 justify-center">
                         <AlertTriangle/>
                         <span>{error}</span>
                     </div>
