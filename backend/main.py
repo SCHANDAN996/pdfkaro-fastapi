@@ -44,7 +44,7 @@ def read_root():
 
 @app.post("/api/v1/merge")
 async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form(...)):
-    # ... (Code from original handoff, no changes)
+    # ... (Code is unchanged from original)
     logger.info(f"Received {len(files)} files for merging.")
     try:
         page_instructions = json.loads(pages_data)
@@ -78,7 +78,7 @@ async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form
 
 @app.post("/api/v1/split")
 async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(...)):
-    # ... (Code from original handoff, no changes)
+    # ... (Code is unchanged from original)
     logger.info(f"Received file '{file.filename}' for splitting/extraction.")
     try:
         selected_pages_indices = json.loads(pages_to_extract)
@@ -97,7 +97,7 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
             filename = "extracted_pages_by_PDFkaro.in.pdf"
             media_type = "application/pdf"
         
-        else:
+        else: # Split all pages
             output_buffer = io.BytesIO()
             with zipfile.ZipFile(output_buffer, 'w') as zip_file:
                 for i, page in enumerate(source_pdf.pages):
@@ -124,7 +124,7 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
 
 @app.post("/api/v1/extract-single-page")
 async def extract_single_page(file: UploadFile = File(...), page_number: int = Form(...)):
-    # ... (Code from original handoff, no changes)
+    # ... (Code is unchanged from original)
     try:
         pdf_bytes = await file.read()
         source_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
