@@ -1,11 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './components/Header.jsx';
-import Footer from './components/Footer.jsx';
-import HomePage from './pages/HomePage.jsx';
-import MergePage from './pages/MergePage.jsx';
-import DownloadPage from './pages/DownloadPage.jsx';
-import SplitPage from './pages/SplitPage.jsx'; // SplitPage ko import karein
+import Header from '../components/Header.jsx';
+import Footer from '../components/Footer.jsx';
+import HomePage from './HomePage.jsx';
+import MergePage from './MergePage.jsx';
+import DownloadPage from './DownloadPage.jsx';
+import SplitPage from './SplitPage.jsx';
+import ProjectExporterPage from './ProjectExporterPage.jsx';
 
 function App() {
   return (
@@ -16,9 +17,9 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/merge" element={<MergePage />} />
-            <Route path="/split" element={<SplitPage />} /> {/* SplitPage ka route jodein */}
+            <Route path="/split" element={<SplitPage />} />
             <Route path="/download" element={<DownloadPage />} />
-            {/* Yahan future me aur routes (compress, etc.) aayenge */}
+            <Route path="/project-exporter" element={<ProjectExporterPage />} />
           </Routes>
         </main>
         <Footer />
@@ -28,5 +29,3 @@ function App() {
 }
 
 export default App;
-
-
