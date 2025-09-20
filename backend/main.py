@@ -211,3 +211,51 @@ async def process_structure(request: ProcessRequest):
     except Exception as e:
         logger.error(f"Error processing structure: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+# main.py में मौजूदा कोड के अंत में यह नया एंडपॉइंट जोड़ें
+
+@app.post("/api/v1/export-zip-structure")
+async def export_zip_structure(request: ProcessRequest):
+    try:
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # Add a summary/readme file if alignment is requested
+            if request.align_structure:
+                tree_structure = create_tree_structure(request.files)
+                summary_content = "Project Structure:\n"
+                summary_content += generate_aligned_output(tree_structure)
+                zip_file.writestr("00_project_structure.txt", summary_content)
+
+            # Process each file
+            for file_data in request.files:
+                file_content = ""
+                if request.include_paths:
+                    file_content += f"--- File: {file_data.path} ---\n\n"
+                
+                file_content += file_data.content
+
+                # Create file based on output format
+                if request.output_format == "docx":
+                    doc = docx.Document()
+                    doc.add_paragraph(file_content)
+                    
+                    file_buffer = io.BytesIO()
+                    doc.save(file_buffer)
+                    file_buffer.seek(0)
+
+                    # Ensure the filename has .docx extension
+                    base_name = os.path.splitext(file_data.path)[0]
+                    file_name_in_zip = f"{base_name}.docx"
+                    zip_file.writestr(file_name_in_zip, file_buffer.getvalue())
+                else: # Default to .txt
+                    file_name_in_zip = f"{file_data.path}.txt"
+                    zip_file.writestr(file_name_in_zip, file_content.encode('utf-8'))
+
+        zip_buffer.seek(0)
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=project_export_by_PDFkaro.in.zip"}
+        )
+    except Exception as e:
+        logger.error(f"Error creating zip archive: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
