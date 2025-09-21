@@ -6,8 +6,10 @@ import HomePage from './pages/HomePage.jsx';
 import MergePage from './features/Merge/MergePage.jsx';
 import SplitPage from './features/Split/SplitPage.jsx';
 import ProjectExporterPage from './features/ProjectExporter/ProjectExporterPage.jsx';
+import CompressPage from './features/Compress/CompressPage.jsx';
 import MergeCompletePage from './features/Merge/MergeCompletePage.jsx';
 import SplitCompletePage from './features/Split/SplitCompletePage.jsx';
+import CompressCompletePage from './features/Compress/CompressCompletePage.jsx';
 
 function App() {
   return (
@@ -20,8 +22,11 @@ function App() {
             <Route path="/merge-pdf" element={<MergePage />} />
             <Route path="/split-pdf" element={<SplitPage />} />
             <Route path="/project-exporter" element={<ProjectExporterPage />} />
+            <Route path="/compress-pdf" element={<CompressPage />} />
+            
             <Route path="/merge-complete" element={<MergeCompletePage />} />
             <Route path="/split-complete" element={<SplitCompletePage />} />
+            <Route path="/compress-complete" element={<CompressCompletePage />} />
           </Routes>
         </main>
         <Footer />
