@@ -25,7 +25,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pydantic Models for Project Exporter
 class FileData(BaseModel):
     path: str
     content: str
@@ -40,11 +39,8 @@ class ProcessRequest(BaseModel):
 def read_root():
     return {"message": "PDFkaro.in Backend is running!"}
 
-# --- PDF Tools ---
-
 @app.post("/api/v1/merge")
 async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form(...)):
-    # ... (Code is unchanged from original)
     logger.info(f"Received {len(files)} files for merging.")
     try:
         page_instructions = json.loads(pages_data)
@@ -78,7 +74,6 @@ async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form
 
 @app.post("/api/v1/split")
 async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(...)):
-    # ... (Code is unchanged from original)
     logger.info(f"Received file '{file.filename}' for splitting/extraction.")
     try:
         selected_pages_indices = json.loads(pages_to_extract)
@@ -97,13 +92,12 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
             filename = "extracted_pages_by_PDFkaro.in.pdf"
             media_type = "application/pdf"
         
-        else: # Split all pages
+        else:
             output_buffer = io.BytesIO()
             with zipfile.ZipFile(output_buffer, 'w') as zip_file:
                 for i, page in enumerate(source_pdf.pages):
                     dst = pikepdf.Pdf.new()
                     dst.pages.append(page)
-                    
                     page_buffer = io.BytesIO()
                     dst.save(page_buffer)
                     page_buffer.seek(0)
@@ -124,7 +118,6 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
 
 @app.post("/api/v1/extract-single-page")
 async def extract_single_page(file: UploadFile = File(...), page_number: int = Form(...)):
-    # ... (Code is unchanged from original)
     try:
         pdf_bytes = await file.read()
         source_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
@@ -145,8 +138,6 @@ async def extract_single_page(file: UploadFile = File(...), page_number: int = F
     except Exception as e:
         logger.error(f"Error extracting single page: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-
-# --- Project Exporter Tool ---
 
 def create_tree_structure(files: List[FileData]):
     structure = {}
@@ -176,20 +167,17 @@ def generate_aligned_output(structure: Dict, path_prefix="", is_last=True):
 async def process_structure(request: ProcessRequest):
     try:
         final_content = ""
-        
         if request.align_structure:
             file_structure = create_tree_structure(request.files)
             final_content += "Project Structure:\n"
             final_content += generate_aligned_output(file_structure)
             final_content += "\n" + ("=" * 50) + "\n\n"
-
         for file_data in request.files:
             if request.include_paths:
                 final_content += f"--- File: {file_data.path} ---\n\n"
             final_content += file_data.content + "\n\n"
             if request.include_paths:
                 final_content += f"--- End of File: {file_data.path} ---\n\n" + ("=" * 50) + "\n\n"
-
         if request.output_format == "docx":
             doc = docx.Document()
             doc.add_paragraph(final_content)
@@ -198,58 +186,42 @@ async def process_structure(request: ProcessRequest):
             buffer.seek(0)
             media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             filename = "project_export_by_PDFkaro.in.docx"
-        else: # Default is TXT
+        else:
             buffer = io.BytesIO(final_content.encode('utf-8'))
             media_type = "text/plain"
             filename = "project_export_by_PDFkaro.in.txt"
-
-        return StreamingResponse(
-            buffer,
-            media_type=media_type,
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
-        )
+        return StreamingResponse(buffer, media_type=media_type, headers={"Content-Disposition": f"attachment; filename={filename}"})
     except Exception as e:
         logger.error(f"Error processing structure: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-# main.py में मौजूदा कोड के अंत में यह नया एंडपॉइंट जोड़ें
 
 @app.post("/api/v1/export-zip-structure")
 async def export_zip_structure(request: ProcessRequest):
     try:
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            # Add a summary/readme file if alignment is requested
             if request.align_structure:
                 tree_structure = create_tree_structure(request.files)
                 summary_content = "Project Structure:\n"
                 summary_content += generate_aligned_output(tree_structure)
                 zip_file.writestr("00_project_structure.txt", summary_content)
-
-            # Process each file
             for file_data in request.files:
                 file_content = ""
                 if request.include_paths:
                     file_content += f"--- File: {file_data.path} ---\n\n"
-                
                 file_content += file_data.content
-
-                # Create file based on output format
                 if request.output_format == "docx":
                     doc = docx.Document()
                     doc.add_paragraph(file_content)
-                    
                     file_buffer = io.BytesIO()
                     doc.save(file_buffer)
                     file_buffer.seek(0)
-
-                    # Ensure the filename has .docx extension
                     base_name = os.path.splitext(file_data.path)[0]
                     file_name_in_zip = f"{base_name}.docx"
                     zip_file.writestr(file_name_in_zip, file_buffer.getvalue())
-                else: # Default to .txt
-                    file_name_in_zip = f"{file_data.path}.txt"
+                else:
+                    file_name_in_zip = f"{file_data.path}.txt" if not file_data.path.endswith('.txt') else file_data.path
                     zip_file.writestr(file_name_in_zip, file_content.encode('utf-8'))
-
         zip_buffer.seek(0)
         return StreamingResponse(
             zip_buffer,
