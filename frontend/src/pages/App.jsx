@@ -1,12 +1,15 @@
+// frontend/src/pages/App.jsx
+
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from '../components/Header.jsx';
 import Footer from '../components/Footer.jsx';
 import HomePage from './HomePage.jsx';
 import MergePage from './MergePage.jsx';
-import DownloadPage from './DownloadPage.jsx';
 import SplitPage from './SplitPage.jsx';
-import ProjectExporterPage from './ProjectExporterPage.jsx'; // नया पेज इम्पोर्ट करें
+import ProjectExporterPage from './ProjectExporterPage.jsx';
+import MergeCompletePage from './MergeCompletePage.jsx'; // नया इम्पोर्ट
+import SplitCompletePage from './SplitCompletePage.jsx'; // नया इम्पोर्ट
 
 function App() {
   return (
@@ -18,8 +21,11 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/merge" element={<MergePage />} />
             <Route path="/split" element={<SplitPage />} />
-            <Route path="/download" element={<DownloadPage />} />
-            <Route path="/project-exporter" element={<ProjectExporterPage />} /> {/* नया रूट जोड़ें */}
+            <Route path="/project-exporter" element={<ProjectExporterPage />} />
+            
+            {/* बदले हुए रूट्स */}
+            <Route path="/merge-complete" element={<MergeCompletePage />} />
+            <Route path="/split-complete" element={<SplitCompletePage />} />
           </Routes>
         </main>
         <Footer />
