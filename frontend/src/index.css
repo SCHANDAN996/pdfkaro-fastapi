@@ -1,8 +1,12 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App.jsx';
+import reportWebVitals from './reportWebVitals';
 
-/* Yeh mobile par drag-drop ko smooth banayega */
-[data-rbd-draggable-id] {
-  touch-action: none;
-}
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <App />
+);
+
+reportWebVitals();
