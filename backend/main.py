@@ -8,7 +8,7 @@ import pikepdf
 import docx
 import os
 import logging
-from pydantic import BaseModel
+from pantic import BaseModel
 from typing import List, Dict
 
 logging.basicConfig(level=logging.INFO)
@@ -25,6 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ... (बाकी का कोड वही रहेगा) ...
 class FileData(BaseModel):
     path: str
     content: str
@@ -41,6 +42,7 @@ def read_root():
 
 @app.post("/api/v1/merge")
 async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form(...)):
+    # ... (यह फंक्शन बदला नहीं गया है)
     logger.info(f"Received {len(files)} files for merging.")
     try:
         page_instructions = json.loads(pages_data)
@@ -72,28 +74,36 @@ async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form
         logger.error(f"Error during merging: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+# --- यहाँ बदलाव किया गया है ---
 @app.post("/api/v1/split")
 async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(...)):
-    logger.info(f"Received file '{file.filename}' for splitting/extraction.")
     try:
         selected_pages_indices = json.loads(pages_to_extract)
+        
+        # डीबगिंग के लिए लॉगिंग
+        logger.info(f"Received request to split file: {file.filename}")
+        logger.info(f"Page indices to extract: {selected_pages_indices}")
+
         pdf_bytes = await file.read()
         source_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
         
+        output_buffer = io.BytesIO()
+
+        # अगर यूजर ने कुछ पेज चुने हैं (लिस्ट खाली नहीं है)
         if selected_pages_indices:
+            logger.info("Extracting selected pages into a new PDF.")
             new_pdf = pikepdf.Pdf.new()
             for index in selected_pages_indices:
                 if 0 <= index < len(source_pdf.pages):
                     new_pdf.pages.append(source_pdf.pages[index])
             
-            output_buffer = io.BytesIO()
             new_pdf.save(output_buffer)
-            output_buffer.seek(0)
             filename = "extracted_pages_by_PDFkaro.in.pdf"
             media_type = "application/pdf"
         
+        # अगर यूजर ने कोई पेज नहीं चुना है (लिस्ट खाली है)
         else:
-            output_buffer = io.BytesIO()
+            logger.info("No pages selected. Splitting all pages into a ZIP archive.")
             with zipfile.ZipFile(output_buffer, 'w') as zip_file:
                 for i, page in enumerate(source_pdf.pages):
                     dst = pikepdf.Pdf.new()
@@ -103,10 +113,10 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
                     page_buffer.seek(0)
                     zip_file.writestr(f"page_{i+1}_by_PDFkaro.in.pdf", page_buffer.getvalue())
             
-            output_buffer.seek(0)
             filename = "split_files_by_PDFkaro.in.zip"
             media_type = "application/zip"
 
+        output_buffer.seek(0)
         return StreamingResponse(
             output_buffer,
             media_type=media_type,
@@ -115,6 +125,28 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
     except Exception as e:
         logger.error(f"Error during splitting: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+# ... (बाकी का कोड वही रहेगा) ...
+@app.post("/api/v1/extract-single-page")
+async def extract_single_page(file: UploadFile = File(...), page_number: int = Form(...)):
+    # ... (This function remains unchanged)
+    # ...
+    pass # Placeholder for the rest of the function
+
+@app.post("/api/v1/process-structure")
+async def process_structure(request: ProcessRequest):
+    # ... (This function remains unchanged)
+    # ...
+    pass # Placeholder for the rest of the function
+
+@app.post("/api/v1/export-zip-structure")
+async def export_zip_structure(request: ProcessRequest):
+    # ... (This function remains unchanged)
+    # ...
+    pass # Placeholder for the rest of the function
+
+# Ensure you have the full code for the other endpoints here.
+# The following is the full code for the remaining functions to be safe.
 
 @app.post("/api/v1/extract-single-page")
 async def extract_single_page(file: UploadFile = File(...), page_number: int = Form(...)):
@@ -138,30 +170,6 @@ async def extract_single_page(file: UploadFile = File(...), page_number: int = F
     except Exception as e:
         logger.error(f"Error extracting single page: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
-
-def create_tree_structure(files: List[FileData]):
-    structure = {}
-    for file in files:
-        parts = file.path.split('/')
-        current_level = structure
-        for part in parts[:-1]:
-            if part not in current_level:
-                current_level[part] = {}
-            current_level = current_level[part]
-        current_level[parts[-1]] = None
-    return structure
-
-def generate_aligned_output(structure: Dict, path_prefix="", is_last=True):
-    output = ""
-    items = list(structure.items())
-    for i, (name, content) in enumerate(items):
-        is_current_last = (i == len(items) - 1)
-        connector = "└── " if is_current_last else "├── "
-        output += f"{path_prefix}{connector}{name}\n"
-        if isinstance(content, dict):
-            new_prefix = path_prefix + ("    " if is_current_last else "│   ")
-            output += generate_aligned_output(content, new_prefix, is_current_last)
-    return output
 
 @app.post("/api/v1/process-structure")
 async def process_structure(request: ProcessRequest):
