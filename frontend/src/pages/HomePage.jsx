@@ -6,6 +6,7 @@ const HomePage = () => {
     const tools = [
         { icon: Merge, title: 'Merge PDF', description: 'Combine multiple PDFs and pages.', link: '/merge-pdf', key: 'merge' },
         { icon: Scissors, title: 'Split & Extract PDF', description: 'Extract pages from a PDF.', link: '/split-pdf', key: 'split' },
+        // --- सुनिश्चित करें कि यह लाइन बिल्कुल ऐसी हो ---
         { icon: FolderGit2, title: 'Project Exporter', description: 'Export a folder\'s content into a single TXT/Word file.', link: '/project-exporter', key: 'export' },
         { icon: FileArchive, title: 'Compress PDF', description: 'Reduce the size of your PDF file.', link: '#', key: 'compress' },
     ];
