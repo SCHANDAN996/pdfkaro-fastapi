@@ -1,6 +1,3 @@
-
-// frontend/src/pages/SplitCompletePage.jsx
-
 import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Download, ArrowLeft, LoaderCircle, AlertTriangle } from 'lucide-react';
@@ -15,9 +12,11 @@ const SplitCompletePage = () => {
 
     const [pagePreviews, setPagePreviews] = useState([]);
     const [isLoading, setIsLoading] = useState(!!originalFile);
+    const [loadingMessage, setLoadingMessage] = useState(''); // <-- कृपया सुनिश्चित करें कि यह लाइन मौजूद है
     const [error, setError] = useState('');
 
     const generateThumbnails = useCallback(async () => {
+        setLoadingMessage('Generating page previews...');
         if (!originalFile || !originalFile.data) {
             setIsLoading(false);
             setError('Original file data is missing, cannot generate previews.');
@@ -52,6 +51,7 @@ const SplitCompletePage = () => {
             setError("Could not generate page previews, but you can still download your files.");
         } finally {
             setIsLoading(false);
+            setLoadingMessage('');
         }
     }, [originalFile]);
 
@@ -66,7 +66,6 @@ const SplitCompletePage = () => {
         }
     }, [zipUrl, originalFile, generateThumbnails, navigate]);
     
-    // --- यहाँ बदलाव किया गया है ---
     const handleSinglePageDownload = async (pageIndex) => {
         setIsLoading(true);
         setLoadingMessage(`Downloading page ${pageIndex + 1}...`);
@@ -99,10 +98,9 @@ const SplitCompletePage = () => {
             setLoadingMessage('');
         }
     };
-    
-    // --- बाकी का JSX वही है ---
+
     if (isLoading) {
-        return <div className="text-center h-96 flex flex-col justify-center items-center"><LoaderCircle className="animate-spin" size={48} /><p className="mt-4">{loadingMessage || 'Generating page previews...'}</p></div>;
+        return <div className="text-center h-96 flex flex-col justify-center items-center"><LoaderCircle className="animate-spin" size={48} /><p className="mt-4">{loadingMessage}</p></div>;
     }
 
     return (
