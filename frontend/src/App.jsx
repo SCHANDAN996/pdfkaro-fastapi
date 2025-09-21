@@ -17,11 +17,8 @@ function App() {
         <main className="flex-grow container mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={<HomePage />} />
-            
-            {/* --- यहाँ पाथ को अपडेट किया गया है --- */}
             <Route path="/merge-pdf" element={<MergePage />} />
             <Route path="/split-pdf" element={<SplitPage />} />
-            
             <Route path="/project-exporter" element={<ProjectExporterPage />} />
             <Route path="/merge-complete" element={<MergeCompletePage />} />
             <Route path="/split-complete" element={<SplitCompletePage />} />
