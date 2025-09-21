@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Download, ArrowLeft, LoaderCircle, AlertTriangle } from 'lucide-react';
 
-// Helper functions (same as before)
 const ensurePdfJsLib = () => new Promise(resolve => { const check = () => window.pdfjsLib ? resolve(window.pdfjsLib) : setTimeout(check, 100); check(); });
 const base64ToBlob = (base64, type) => { try { const byteCharacters = atob(base64.split(',')[1]); const byteNumbers = new Array(byteCharacters.length); for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); } const byteArray = new Uint8Array(byteNumbers); return new Blob([byteArray], { type }); } catch (e) { console.error("Failed to decode base64 string:", e); return null; }};
 
@@ -31,8 +30,10 @@ const SplitCompletePage = () => {
             const typedarray = new Uint8Array(arrayBuffer);
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
 
-            if (pdf.numPages === 0) throw new Error("The PDF file seems to have 0 pages or is corrupted.");
-
+            if (pdf.numPages === 0) {
+                throw new Error("The PDF file seems to have 0 pages or is corrupted.");
+            }
+            
             const thumbnails = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
@@ -63,10 +64,45 @@ const SplitCompletePage = () => {
             if (zipUrl) URL.revokeObjectURL(zipUrl);
         }
     }, [zipUrl, originalFile, generateThumbnails, navigate]);
-
+    
+    // --- यहाँ बदलाव किया गया है ---
     const handleSinglePageDownload = async (pageIndex) => {
-        // ... (This function remains unchanged)
+        setIsLoading(true);
+        setLoadingMessage(`Downloading page ${pageIndex + 1}...`);
+        try {
+            const blob = base64ToBlob(originalFile.data, 'application/pdf');
+            const formData = new FormData();
+            formData.append('file', blob, originalFile.name);
+            formData.append('page_number', pageIndex);
+
+            const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
+            const response = await fetch(`${apiUrl}/api/v1/extract-single-page`, { method: 'POST', body: formData });
+
+            if (response.ok) {
+                const newBlob = await response.blob();
+                const url = URL.createObjectURL(newBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `page_${pageIndex + 1}_by_PDFkaro.in.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                setError("Failed to download single page.");
+            }
+        } catch (err) {
+            setError("An error occurred while downloading the page.");
+        } finally {
+            setIsLoading(false);
+            setLoadingMessage('');
+        }
     };
+    
+    // --- बाकी का JSX वही है ---
+    if (isLoading) {
+        return <div className="text-center h-96 flex flex-col justify-center items-center"><LoaderCircle className="animate-spin" size={48} /><p className="mt-4">{loadingMessage || 'Generating page previews...'}</p></div>;
+    }
 
     return (
         <div className="w-full max-w-6xl mx-auto p-4">
@@ -79,9 +115,7 @@ const SplitCompletePage = () => {
                     </a>
                 )}
             </div>
-            {isLoading ? (
-                 <div className="text-center h-64 flex flex-col justify-center items-center"><LoaderCircle className="animate-spin" size={48} /><p className="mt-4">Generating page previews...</p></div>
-            ) : error ? (
+            {error ? (
                 <div className="p-4 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-lg flex items-center gap-3 justify-center">
                     <AlertTriangle/>
                     <span>{error}</span>
