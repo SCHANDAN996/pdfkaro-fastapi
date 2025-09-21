@@ -1,12 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from '../components/Header.jsx';
-import Footer from '../components/Footer.jsx';
-import HomePage from './HomePage.jsx';
-import MergePage from './MergePage.jsx';
-import DownloadPage from './DownloadPage.jsx';
-import SplitPage from './SplitPage.jsx';
-import ProjectExporterPage from './ProjectExporterPage.jsx';
+import Header from './components/Header.jsx';
+import Footer from './components/Footer.jsx';
+import HomePage from './pages/HomePage.jsx';
+import MergePage from './features/Merge/MergePage.jsx';
+import SplitPage from './features/Split/SplitPage.jsx';
+import ProjectExporterPage from './features/ProjectExporter/ProjectExporterPage.jsx';
+import MergeCompletePage from './features/Merge/MergeCompletePage.jsx';
+import SplitCompletePage from './features/Split/SplitCompletePage.jsx';
 
 function App() {
   return (
@@ -18,8 +19,9 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/merge" element={<MergePage />} />
             <Route path="/split" element={<SplitPage />} />
-            <Route path="/download" element={<DownloadPage />} />
             <Route path="/project-exporter" element={<ProjectExporterPage />} />
+            <Route path="/merge-complete" element={<MergeCompletePage />} />
+            <Route path="/split-complete" element={<SplitCompletePage />} />
           </Routes>
         </main>
         <Footer />
