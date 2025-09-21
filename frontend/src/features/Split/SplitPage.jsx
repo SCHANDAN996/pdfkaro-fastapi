@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
@@ -65,7 +64,6 @@ const SplitPage = () => {
         const formData = new FormData();
         formData.append('file', file);
         
-        // Page indices are 0-based, page numbers are 1-based
         const pageIndices = Array.from(selectedPages).map(p => p - 1).sort((a,b) => a-b);
         formData.append('pages_to_extract', JSON.stringify(pageIndices));
         
@@ -78,21 +76,23 @@ const SplitPage = () => {
             });
 
             if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
+                // --- यहाँ बदलाव किया गया है ---
+                const newPdfBlob = await response.blob();
+                const downloadUrl = URL.createObjectURL(newPdfBlob);
                 
+                // अब हम नई बनी हुई PDF को base64 में पढ़ेंगे ताकि अगले पेज पर प्रीव्यू दिखा सकें
                 const reader = new FileReader();
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(newPdfBlob);
                 reader.onloadend = () => {
                     const base64File = reader.result;
                     navigate('/split-complete', { 
                         state: { 
-                            sourceTool: 'split',
-                            zipUrl: url,
-                            originalFile: { data: base64File, name: file.name }
+                            downloadUrl: downloadUrl, // ZIP नहीं, बल्कि नई PDF का URL
+                            processedFile: { data: base64File, name: selectedPages.size > 0 ? "extracted_pages.pdf" : file.name }
                         } 
                     });
                 };
+                // --- बदलाव समाप्त ---
             } else {
                 alert('Split failed. Please try again.');
             }
