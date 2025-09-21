@@ -32,7 +32,6 @@ const HomePage = () => {
                 </div>
             </div>
 
-            {/* --- नया SEO सेक्शन: FAQ --- */}
             <div className="mt-20 text-left max-w-4xl mx-auto">
                 <h2 className="text-3xl font-bold text-slate-700 text-center mb-8">Frequently Asked Questions</h2>
                 <div className="space-y-6 bg-white p-8 rounded-lg border">
@@ -58,7 +57,6 @@ const HomePage = () => {
                     </div>
                 </div>
             </div>
-            {/* --- SEO सेक्शन समाप्त --- */}
         </div>
     );
 };
