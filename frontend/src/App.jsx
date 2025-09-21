@@ -19,7 +19,10 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/merge-pdf" element={<MergePage />} />
             <Route path="/split-pdf" element={<SplitPage />} />
+            
+            {/* --- सुनिश्चित करें कि यह लाइन बिल्कुल ऐसी हो --- */}
             <Route path="/project-exporter" element={<ProjectExporterPage />} />
+
             <Route path="/merge-complete" element={<MergeCompletePage />} />
             <Route path="/split-complete" element={<SplitCompletePage />} />
           </Routes>
