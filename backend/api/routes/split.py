@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(...)):
     try:
         page_instructions = json.loads(pages_to_extract)
-        logger.info(f"Page instructions received: {page_instructions}")
+        logger.info(f"Page instructions received for splitting: {page_instructions}")
 
         pdf_bytes = await file.read()
         source_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
