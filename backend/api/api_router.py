@@ -4,6 +4,7 @@ from .routes import merge, split, compress, project_exporter
 api_router = APIRouter()
 
 # सभी टूल राउटर्स को एक मुख्य राउटर में शामिल करें
+# नोट: अब आपके फाइनल URL ऐसे दिखेंगे: /api/v1/merge/, /api/v1/split/, आदि।
 api_router.include_router(merge.router, prefix="/merge", tags=["Merge"])
 api_router.include_router(split.router, prefix="/split", tags=["Split"])
 api_router.include_router(compress.router, prefix="/compress", tags=["Compress"])
