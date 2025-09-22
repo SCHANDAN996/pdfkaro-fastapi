@@ -24,13 +24,10 @@ const SplitCompletePage = () => {
             const pdfjsLib = await ensurePdfJsLib();
             const blob = base64ToBlob(processedFile.data, 'application/pdf');
             if (!blob) throw new Error("Could not convert processed file data.");
-            
             const arrayBuffer = await blob.arrayBuffer();
             const typedarray = new Uint8Array(arrayBuffer);
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
-
             if (pdf.numPages === 0) throw new Error("The resulting PDF file has 0 pages.");
-            
             const thumbnails = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
@@ -44,8 +41,7 @@ const SplitCompletePage = () => {
             }
             setPagePreviews(thumbnails);
         } catch (err) {
-            console.error("Error generating thumbnails:", err);
-            setError("Could not generate previews, but you can still download your file.");
+            setError("Could not generate page previews, but you can still download your file.");
         } finally {
             setIsLoading(false);
         }
@@ -60,17 +56,14 @@ const SplitCompletePage = () => {
         return () => { if (downloadUrl) URL.revokeObjectURL(downloadUrl); }
     }, [downloadUrl, processedFile, generateThumbnails, navigate]);
     
-    // --- यह फंक्शन वापस जोड़ा गया है ---
     const handleSinglePageDownload = async (pageIndex) => {
         try {
             const blob = base64ToBlob(processedFile.data, 'application/pdf');
             const formData = new FormData();
             formData.append('file', blob, processedFile.name);
             formData.append('page_number', pageIndex);
-
             const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
             const response = await fetch(`${apiUrl}/api/v1/extract-single-page`, { method: 'POST', body: formData });
-
             if (response.ok) {
                 const newBlob = await response.blob();
                 const url = URL.createObjectURL(newBlob);
@@ -93,7 +86,7 @@ const SplitCompletePage = () => {
         <div className="w-full max-w-6xl mx-auto p-4">
             <div className="text-center mb-8">
                 <h1 className="text-3xl sm:text-4xl font-bold">Your PDF has been processed!</h1>
-                <p className="mt-2 text-slate-600">Your new file is ready. Below is a preview of the pages you selected.</p>
+                <p className="text-slate-600 mt-2">Your new file is ready. Below is a preview of the pages you selected.</p>
                 {downloadUrl && (
                     <a href={downloadUrl} download="processed_file_by_PDFkaro.in.pdf" className="mt-4 inline-flex items-center justify-center bg-slate-700 text-white font-bold py-3 px-10 rounded-lg hover:bg-slate-800">
                         <Download className="mr-3" /> Download Your File
@@ -112,7 +105,6 @@ const SplitCompletePage = () => {
                     {pagePreviews.map(page => (
                         <div key={page.id} className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
                             <img src={page.thumbnail} alt={`Page ${page.pageIndex + 1}`} className="w-full h-full object-contain rounded-lg"/>
-                            {/* --- डाउनलोड बटन वापस जोड़ा गया है --- */}
                             <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-50 transition-opacity flex items-center justify-center rounded-lg">
                                 <button onClick={() => handleSinglePageDownload(page.pageIndex)} className="p-2 bg-white rounded-full text-slate-700 opacity-0 group-hover:opacity-100" title="Download this page">
                                     <Download size={20} />
