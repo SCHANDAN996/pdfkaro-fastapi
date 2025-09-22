@@ -17,5 +17,4 @@ app.add_middleware(
 def read_root():
     return {"message": "PDFkaro.in Backend is running!"}
 
-# मुख्य API राउटर को ऐप में शामिल करें
 app.include_router(api_router, prefix="/api/v1")
