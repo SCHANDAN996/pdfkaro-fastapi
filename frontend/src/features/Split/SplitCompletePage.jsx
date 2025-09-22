@@ -9,7 +9,6 @@ const SplitCompletePage = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { downloadUrl, processedFile } = location.state || {};
-
     const [pagePreviews, setPagePreviews] = useState([]);
     const [isLoading, setIsLoading] = useState(!!processedFile);
     const [error, setError] = useState('');
@@ -17,7 +16,7 @@ const SplitCompletePage = () => {
     const generateThumbnails = useCallback(async () => {
         if (!processedFile || !processedFile.data) {
             setIsLoading(false);
-            setError('Processed file data is missing, cannot generate previews.');
+            setError('Processed file data is missing.');
             return;
         }
         try {
@@ -41,7 +40,7 @@ const SplitCompletePage = () => {
             }
             setPagePreviews(thumbnails);
         } catch (err) {
-            setError("Could not generate page previews, but you can still download your file.");
+            setError("Could not generate previews, but you can still download your file.");
         } finally {
             setIsLoading(false);
         }
@@ -75,10 +74,10 @@ const SplitCompletePage = () => {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             } else {
-                setError("Failed to download single page.");
+                alert("Failed to download single page.");
             }
         } catch (err) {
-            setError("An error occurred while downloading the page.");
+            alert("An error occurred while downloading the page.");
         }
     };
 
