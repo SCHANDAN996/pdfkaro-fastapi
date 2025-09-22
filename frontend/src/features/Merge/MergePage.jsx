@@ -42,9 +42,11 @@ const SortablePage = ({ page, index, onRemove, onRotate }) => {
           src={page.thumbnail}
           alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`}
           className="w-full h-full object-contain rounded-lg transition-transform duration-300"
+          // --- 1. रोटेशन के लिए यह स्टाइल जोड़ा गया है ---
           style={{ transform: `rotate(${page.rotation}deg)` }}
         />
         <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* --- 2. onClick इवेंट्स को सही फंक्शन से जोड़ा गया है --- */}
           <button onClick={(e) => { e.stopPropagation(); onRotate(page.id); }} className="p-1.5 bg-slate-700 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-slate-500" title="Rotate 90°"><RotateCw size={14} /></button>
           <button onClick={(e) => { e.stopPropagation(); onRemove(page.id); }} className="p-1.5 bg-red-500 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-red-400" title="Remove"><Trash2 size={14} /></button>
         </div>
@@ -54,6 +56,7 @@ const SortablePage = ({ page, index, onRemove, onRotate }) => {
     </div>
   );
 };
+
 
 const MergePage = () => {
     const [pages, setPages] = useState([]);
@@ -159,8 +162,9 @@ const MergePage = () => {
                 <h1 className="text-3xl sm:text-4xl font-bold">Merge PDF Files</h1>
                 <p className="text-slate-600 mt-2">Combine and reorder pages from multiple PDFs into one single document.</p>
             </div>
+
             {isLoading ? (
-                <div className="flex flex-col items-center justify-center text-center h-96">
+                 <div className="flex flex-col items-center justify-center text-center h-96">
                     <LoaderCircle className="animate-spin text-slate-700" size={64} />
                     <h2 className="mt-6 text-2xl font-bold text-slate-800">{processingMessage}</h2>
                     <p className="text-slate-500">Please wait, this may take a moment.</p>
@@ -183,10 +187,12 @@ const MergePage = () => {
                             </div>
                         </SortableContext>
                     </DndContext>
+                    
                     <div {...getRootProps()} className="mt-4 p-3 border-2 border-dashed rounded-lg text-center cursor-pointer text-sm text-slate-600 hover:bg-slate-50 hover:border-primary">
                         <input {...getInputProps()} />
                         Add more files...
                     </div>
+
                     <div className="text-center mt-8">
                         <button onClick={handleMerge} className="bg-slate-700 text-white font-bold py-3 px-12 rounded-lg hover:bg-slate-800">
                             Merge {pages.length} Pages
