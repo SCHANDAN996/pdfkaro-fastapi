@@ -1,7 +1,49 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { useNavigate } from 'react-router-dom';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { UploadCloud, LoaderCircle, Settings, CheckSquare, Square, GripVertical, FileText, FileArchive } from 'lucide-react';
+
+// नया सॉर्टेबल आइटम कंपोनेंट
+const SortableItem = ({ file }) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+    } = useSortable({ id: file.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <li ref={setNodeRef} style={style} {...attributes} className="flex items-center bg-white p-3 mb-2 rounded-md shadow-sm">
+            <span {...listeners} className="cursor-grab active:cursor-grabbing">
+                <GripVertical className="text-slate-400 mr-3" />
+            </span>
+            <span className="font-mono text-sm text-slate-700">{file.path}</span>
+        </li>
+    );
+};
+
 
 const ProjectExporterPage = () => {
     const [files, setFiles] = useState([]);
@@ -12,6 +54,7 @@ const ProjectExporterPage = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const [error, setError] = useState('');
+    const navigate = useNavigate();
 
     const onDrop = useCallback((acceptedFiles) => {
         if (!acceptedFiles || acceptedFiles.length === 0) return;
@@ -23,7 +66,7 @@ const ProjectExporterPage = () => {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve({
-                    id: `${file.name}-${file.lastModified}-${file.size}`,
+                    id: `${file.name}-${file.lastModified}-${file.size}-${Math.random()}`,
                     path: file.webkitRelativePath || file.name,
                     content: reader.result,
                 });
@@ -44,13 +87,21 @@ const ProjectExporterPage = () => {
     }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+    
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
 
-    const handleOnDragEnd = (result) => {
-        if (!result.destination) return;
-        const items = Array.from(files);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
-        setFiles(items);
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (active && over && active.id !== over.id) {
+            setFiles((items) => {
+                const oldIndex = items.findIndex(item => item.id === active.id);
+                const newIndex = items.findIndex(item => item.id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
     };
 
     const handleConvert = async () => {
@@ -117,25 +168,15 @@ const ProjectExporterPage = () => {
                 <>
                     <h3 className="text-xl font-bold text-center mt-8 mb-4">Your Files ({files.length})</h3>
                     <p className="text-center text-sm text-slate-500 mb-4">Drag to reorder the files for the final output.</p>
-                    <DragDropContext onDragEnd={handleOnDragEnd}>
-                        <Droppable droppableId="files">
-                            {(provided) => (
-                                <ul {...provided.droppableProps} ref={provided.innerRef} className="bg-slate-100 p-4 rounded-lg max-h-96 overflow-y-auto">
-                                    {files.map((file, index) => (
-                                        <Draggable key={file.id} draggableId={file.id} index={index}>
-                                            {(provided) => (
-                                                <li ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="flex items-center bg-white p-3 mb-2 rounded-md shadow-sm">
-                                                    <GripVertical className="text-slate-400 mr-3" />
-                                                    <span className="font-mono text-sm text-slate-700">{file.path}</span>
-                                                </li>
-                                            )}
-                                        </Draggable>
-                                    ))}
-                                    {provided.placeholder}
-                                </ul>
-                            )}
-                        </Droppable>
-                    </DragDropContext>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <ul className="bg-slate-100 p-4 rounded-lg max-h-96 overflow-y-auto">
+                            <SortableContext items={files.map(f => f.id)} strategy={verticalListSortingStrategy}>
+                                {files.map(file => (
+                                    <SortableItem key={file.id} file={file} />
+                                ))}
+                            </SortableContext>
+                        </ul>
+                    </DndContext>
 
                     <div className="mt-8 flex flex-col items-center gap-6">
                          <div className="p-4 border rounded-lg w-full sm:w-auto">
