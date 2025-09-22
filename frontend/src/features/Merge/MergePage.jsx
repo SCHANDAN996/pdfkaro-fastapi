@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, LoaderCircle, Trash2, RotateCw, GripVertical } from 'lucide-react';
+import { UploadCloud, LoaderCircle, Trash2, RotateCw } from 'lucide-react';
 
 const MergePage = () => {
     const [pages, setPages] = useState([]);
@@ -34,10 +34,10 @@ const MergePage = () => {
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
                     
                     newPages.push({
-                        id: `${file.name}_page_${i}_${Date.now()}`,
-                        sourceFile: file, // Keep the original File object
+                        id: `${file.name}_page_${i}_${Date.now()}_${Math.random()}`,
+                        sourceFile: file,
                         sourceFileName: file.name,
-                        pageIndex: i - 1, // 0-based index
+                        pageIndex: i - 1,
                         thumbnail: canvas.toDataURL(),
                         rotation: 0
                     });
@@ -151,11 +151,13 @@ const MergePage = () => {
                     <DragDropContext onDragEnd={handleOnDragEnd}>
                         <Droppable droppableId="pages">
                             {(provided) => (
-                                <div {...provided.droppableProps} ref={provided.innerRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4 bg-slate-100 rounded-lg min-h-[220px]">
+                                // --- बदलाव यहाँ है: 'grid' को 'flex flex-wrap' से बदला गया ہے ---
+                                <div {...provided.droppableProps} ref={provided.innerRef} className="flex flex-wrap gap-4 p-4 bg-slate-100 rounded-lg min-h-[220px] justify-center">
                                     {pages.map((page, index) => (
                                         <Draggable key={page.id} draggableId={page.id} index={index}>
                                             {(provided) => (
-                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="w-full">
+                                                // --- बदलाव यहाँ है: हर आइटम को एक निश्चित चौड़ाई दी गई है ---
+                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="w-40 flex-shrink-0">
                                                     <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
                                                         <img src={page.thumbnail} alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`} className="w-full h-full object-contain rounded-lg"/>
                                                         <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
