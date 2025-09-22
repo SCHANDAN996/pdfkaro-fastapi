@@ -251,3 +251,59 @@ async def process_structure(request: ProcessRequest):
 async def export_zip_structure(request: ProcessRequest):
     # ... (code is unchanged)
     pass
+
+
+# ... (main.py में अन्य सभी कोड वही रहेंगे)
+
+@app.post("/api/v1/split")
+async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(...)):
+    try:
+        # अब pages_to_extract में पेज इंडेक्स के साथ रोटेशन भी आएगा
+        page_instructions = json.loads(pages_to_extract)
+        
+        logger.info(f"Page instructions received: {page_instructions}")
+
+        pdf_bytes = await file.read()
+        source_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
+        
+        output_buffer = io.BytesIO()
+
+        # अगर यूजर ने कुछ पेज चुने हैं
+        if page_instructions:
+            new_pdf = pikepdf.Pdf.new()
+            for instruction in page_instructions:
+                index = instruction['pageIndex']
+                rotation = instruction.get('rotation', 0)
+                if 0 <= index < len(source_pdf.pages):
+                    page = source_pdf.pages[index]
+                    if rotation != 0:
+                        page.rotate(rotation, relative=True)
+                    new_pdf.pages.append(page)
+            
+            new_pdf.save(output_buffer)
+            filename = "extracted_pages_by_PDFkaro.in.pdf"
+            media_type = "application/pdf"
+        
+        # अगर कोई पेज नहीं चुना है (सभी को अलग-अलग करें)
+        else:
+            with zipfile.ZipFile(output_buffer, 'w') as zip_file:
+                for i, page in enumerate(source_pdf.pages):
+                    dst = pikepdf.Pdf.new()
+                    dst.pages.append(page)
+                    page_buffer = io.BytesIO()
+                    dst.save(page_buffer)
+                    page_buffer.seek(0)
+                    zip_file.writestr(f"page_{i+1}_by_PDFkaro.in.pdf", page_buffer.getvalue())
+            
+            filename = "split_files_by_PDFkaro.in.zip"
+            media_type = "application/zip"
+
+        output_buffer.seek(0)
+        return StreamingResponse(
+            output_buffer,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        logger.error(f"Error during splitting: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
