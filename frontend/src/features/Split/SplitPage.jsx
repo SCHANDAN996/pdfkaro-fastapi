@@ -100,6 +100,7 @@ const SplitPage = () => {
                 });
             };
         } catch (error) {
+            console.error("Split Error:", error);
             alert('An error occurred. Please try again.');
             setIsProcessing(false);
         }
@@ -111,6 +112,7 @@ const SplitPage = () => {
                 <h1 className="text-3xl sm:text-4xl font-bold">Split & Extract PDF Pages</h1>
                 <p className="text-slate-600 mt-2">Select and rotate the pages you want to extract from your PDF file.</p>
             </div>
+            
             {isProcessing && pages.length === 0 ? (
                 <div className="text-center h-96 flex flex-col justify-center items-center">
                     <LoaderCircle className="animate-spin text-slate-700" size={48} />
