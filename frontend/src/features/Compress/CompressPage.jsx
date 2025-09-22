@@ -1,21 +1,53 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UploadCloud, LoaderCircle, Trash2, RotateCw, Settings, SlidersHorizontal, Target } from 'lucide-react';
 
 const SortablePage = ({ page, index, onRemove, onRotate }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: page.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, touchAction: 'none' };
-  const handleButtonClick = (e, action) => { e.stopPropagation(); action(); };
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: page.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    touchAction: 'none',
+  };
+
+  const handleButtonClick = (e, action) => {
+    e.stopPropagation();
+    action();
+  };
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-40 flex-shrink-0 flex flex-col items-center">
       <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group cursor-grab active:cursor-grabbing">
-        <img src={page.thumbnail} alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`} className="w-full h-full object-contain rounded-lg transition-transform duration-300" style={{ transform: `rotate(${page.rotation}deg)` }} />
+        <img
+          src={page.thumbnail}
+          alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`}
+          className="w-full h-full object-contain rounded-lg transition-transform duration-300"
+          style={{ transform: `rotate(${page.rotation}deg)` }}
+        />
         <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={(e) => handleButtonClick(e, () => onRotate(page.id))} className="p-1.5 bg-slate-700 text-white rounded-full focus:outline-none" title="Rotate 90°"><RotateCw size={14} /></button>
           <button onClick={(e) => handleButtonClick(e, () => onRemove(page.id))} className="p-1.5 bg-red-500 text-white rounded-full focus:outline-none" title="Remove"><Trash2 size={14} /></button>
@@ -33,7 +65,7 @@ const CompressPage = () => {
     const [processingMessage, setProcessingMessage] = useState('');
     const [compressionMode, setCompressionMode] = useState('quality');
     const [qualityValue, setQualityValue] = useState(50);
-    const [targetSize, setTargetSize] = useState('1024'); // Default 1024 KB = 1 MB
+    const [targetSize, setTargetSize] = useState('1024');
     const [sizeUnit, setSizeUnit] = useState('KB');
     const navigate = useNavigate();
 
@@ -81,7 +113,7 @@ const CompressPage = () => {
             });
         }
     };
-
+    
     const handleRemovePage = (id) => setPages(pages.filter(p => p.id !== id));
     const handleRotatePage = (id) => setPages(pages.map(p => p.id === id ? { ...p, rotation: (p.rotation + 90) % 360 } : p));
 
