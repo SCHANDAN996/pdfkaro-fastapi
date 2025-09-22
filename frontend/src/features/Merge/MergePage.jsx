@@ -17,13 +17,13 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { UploadCloud, LoaderCircle, Trash2, RotateCw } from 'lucide-react';
+import { UploadCloud, LoaderCircle, Trash2, RotateCw, GripVertical } from 'lucide-react';
 
-// एक नया और बेहतर सॉर्टेबल पेज कंपोनेंट
+// सॉर्टेबल पेज कंपोनेंट (अपडेटेड)
 const SortablePage = ({ page, index, onRemove, onRotate }) => {
   const {
     attributes,
-    listeners,
+    listeners, // यह अब सिर्फ ड्रैग हैंडल पर लगेगा
     setNodeRef,
     transform,
     transition,
@@ -32,23 +32,42 @@ const SortablePage = ({ page, index, onRemove, onRotate }) => {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    touchAction: 'none', // स्मूथ मोबाइल ड्रैगिंग के लिए
+    touchAction: 'none',
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-40 flex-shrink-0 flex flex-col items-center">
-      <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group cursor-grab active:cursor-grabbing">
+    <div ref={setNodeRef} style={style} {...attributes} className="w-40 flex-shrink-0 flex flex-col items-center">
+      <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
         <img
           src={page.thumbnail}
           alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`}
           className="w-full h-full object-contain rounded-lg transition-transform duration-300"
-          // --- 1. रोटेशन के लिए यह स्टाइल जोड़ा गया है ---
           style={{ transform: `rotate(${page.rotation}deg)` }}
         />
-        <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* --- 2. onClick इवेंट्स को सही फंक्शन से जोड़ा गया है --- */}
-          <button onClick={(e) => { e.stopPropagation(); onRotate(page.id); }} className="p-1.5 bg-slate-700 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-slate-500" title="Rotate 90°"><RotateCw size={14} /></button>
-          <button onClick={(e) => { e.stopPropagation(); onRemove(page.id); }} className="p-1.5 bg-red-500 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-red-400" title="Remove"><Trash2 size={14} /></button>
+        
+        {/* --- मुख्य बदलाव यहाँ है: ड्रैग हैंडल और बटन अलग-अलग हैं --- */}
+        <div 
+          {...listeners} // ड्रैग हैंडल सिर्फ इस आइकन पर है
+          className="absolute top-1 left-1 p-1.5 cursor-grab active:cursor-grabbing bg-white/60 backdrop-blur-sm rounded-full"
+        >
+          <GripVertical size={16} className="text-slate-700"/>
+        </div>
+
+        <div className="absolute top-1 right-1 flex flex-col gap-1">
+          <button 
+            onClick={() => onRotate(page.id)} 
+            className="p-1.5 bg-slate-700 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+            title="Rotate 90°"
+          >
+            <RotateCw size={14} />
+          </button>
+          <button 
+            onClick={() => onRemove(page.id)} 
+            className="p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+            title="Remove"
+          >
+            <Trash2 size={14} />
+          </button>
         </div>
         <span className="absolute bottom-1 left-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{index + 1}</span>
       </div>
@@ -58,7 +77,8 @@ const SortablePage = ({ page, index, onRemove, onRotate }) => {
 };
 
 
-const MergePage = () => {
+const MergePage = ({/*...all props from previous full code...*/}) => {
+    // ... (All functions and state from the previous full code are correct)
     const [pages, setPages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [processingMessage, setProcessingMessage] = useState('');
@@ -203,5 +223,4 @@ const MergePage = () => {
         </div>
     );
 };
-
 export default MergePage;
