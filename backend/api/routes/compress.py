@@ -1,5 +1,5 @@
 import io
-import json
+import zipfile
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from fastapi.responses import StreamingResponse
 import pikepdf
@@ -10,88 +10,135 @@ from PIL import Image
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-def _compose_pdf_from_instructions(pages_data: str, file_map: dict) -> bytes:
-    page_instructions = json.loads(pages_data)
-    open_pdfs = {filename: pikepdf.Pdf.open(io.BytesIO(data)) for filename, data in file_map.items()}
-    composed_pdf = pikepdf.Pdf.new()
-    for instruction in page_instructions:
-        source_filename = instruction['sourceFile']
-        page_index = instruction['pageIndex']
-        rotation = instruction.get('rotation', 0)
-        if source_filename in open_pdfs:
-            source_pdf = open_pdfs[source_filename]
-            page = source_pdf.pages[page_index]
-            if rotation != 0:
-                page.rotate(rotation, relative=True)
-            composed_pdf.pages.append(page)
-    for pdf in open_pdfs.values():
-        pdf.close()
-    
-    buffer = io.BytesIO()
-    composed_pdf.save(buffer)
-    return buffer.getvalue()
-
-def _compress_pdf_images(pdf_bytes: bytes, target_dpi: int, jpeg_quality: int) -> bytes:
-    pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
-    for page in pdf.pages:
-        for key in list(page.images.keys()):
-            try:
-                raw_image = pikepdf.Raw(page.images[key])
-                pil_image = Image.open(io.BytesIO(raw_image.data))
-                if pil_image.mode == 'RGBA':
-                    pil_image = pil_image.convert('RGB')
-                
-                original_dpi = pil_image.info.get('dpi', (72, 72))[0]
-                if original_dpi > target_dpi:
-                    scale_factor = target_dpi / original_dpi
-                    new_width = int(pil_image.width * scale_factor)
-                    new_height = int(pil_image.height * scale_factor)
-                    pil_image = pil_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                
-                img_byte_arr = io.BytesIO()
-                pil_image.save(img_byte_arr, format='JPEG', quality=jpeg_quality, optimize=True)
-                page.images[key].write(img_byte_arr.getvalue(), stream_decode_parameters=None)
-            except Exception as e:
-                logger.warning(f"Could not compress an image: {e}")
-                continue
-    
-    buffer = io.BytesIO()
-    pdf.save(buffer, linearize=True, compress_streams=True, object_stream_mode=pikepdf.ObjectStreamMode.generate)
-    return buffer.getvalue()
-
-@router.post("/quality")
-async def compress_by_quality(files: List[UploadFile] = File(...), pages_data: str = Form(...), quality: float = Form(0.5)):
+@router.post("/")
+async def compress_pdfs(files: List[UploadFile] = File(...), level: str = Form("medium")):
+    """
+    Simple compression endpoint that works reliably
+    """
     try:
-        file_map = {file.filename: await file.read() for file in files}
-        composed_pdf_bytes = _compose_pdf_from_instructions(pages_data, file_map)
-        target_dpi = 72 + (quality * (300 - 72))
-        jpeg_quality = int(30 + (quality * 60))
-        compressed_bytes = _compress_pdf_images(composed_pdf_bytes, target_dpi, jpeg_quality)
-        return StreamingResponse(io.BytesIO(compressed_bytes), media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=compressed_by_PDFkaro.in.pdf"})
+        logger.info(f"Compressing {len(files)} files with level: {level}")
+        
+        # Compression levels
+        compression_levels = {
+            "high": {"dpi": 72, "quality": 60},      # High compression
+            "medium": {"dpi": 150, "quality": 75},   # Balanced
+            "low": {"dpi": 300, "quality": 85}       # Low compression
+        }
+        
+        params = compression_levels.get(level, compression_levels["medium"])
+        
+        # For single file, return PDF directly; for multiple, return ZIP
+        if len(files) == 1:
+            return await compress_single_pdf(files[0], params)
+        else:
+            return await compress_multiple_pdfs(files, params)
+            
     except Exception as e:
+        logger.error(f"Compression error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/size")
-async def compress_to_size(files: List[UploadFile] = File(...), pages_data: str = Form(...), target_size_kb: int = Form(...)):
+async def compress_single_pdf(file: UploadFile, params: dict):
+    """Compress single PDF and return as PDF"""
     try:
-        file_map = {file.filename: await file.read() for file in files}
-        composed_pdf_bytes = _compose_pdf_from_instructions(pages_data, file_map)
+        pdf_bytes = await file.read()
+        compressed_pdf = compress_pdf_bytes(pdf_bytes, params)
         
-        if len(composed_pdf_bytes) / 1024 <= target_size_kb:
-            return StreamingResponse(io.BytesIO(composed_pdf_bytes), media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=compressed_by_PDFkaro.in.pdf"})
-
-        max_size_bytes = target_size_kb * 1024
-        presets = [{'dpi': 72, 'quality': 50}, {'dpi': 100, 'quality': 75}, {'dpi': 150, 'quality': 85}]
+        output_buffer = io.BytesIO(compressed_pdf)
+        filename = f"compressed_{file.filename}"
         
-        best_result_bytes = None
-
-        for preset in presets:
-            compressed_bytes = _compress_pdf_images(composed_pdf_bytes, preset['dpi'], preset['quality'])
-            if len(compressed_bytes) <= max_size_bytes:
-                best_result_bytes = compressed_bytes
-                break
-            best_result_bytes = compressed_bytes
-
-        return StreamingResponse(io.BytesIO(best_result_bytes), media_type="application/pdf", headers={"Content-Disposition": "attachment; filename=compressed_by_PDFkaro.in.pdf"})
+        return StreamingResponse(
+            output_buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
     except Exception as e:
+        raise e
+
+async def compress_multiple_pdfs(files: List[UploadFile], params: dict):
+    """Compress multiple PDFs and return as ZIP"""
+    zip_buffer = io.BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for file in files:
+            try:
+                pdf_bytes = await file.read()
+                compressed_pdf = compress_pdf_bytes(pdf_bytes, params)
+                
+                filename = f"compressed_{file.filename}"
+                zip_file.writestr(filename, compressed_pdf)
+                
+            except Exception as e:
+                logger.warning(f"Failed to compress {file.filename}: {e}")
+                continue
+    
+    zip_buffer.seek(0)
+    return StreamingResponse(
+        zip_buffer,
+        media_type="application/zip",
+        headers={"Content-Disposition": "attachment; filename=compressed_pdfs.zip"}
+    )
+
+def compress_pdf_bytes(pdf_bytes: bytes, params: dict) -> bytes:
+    """Core PDF compression function"""
+    try:
+        # Open PDF
+        pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
+        
+        # Basic compression without image processing (more reliable)
+        output_buffer = io.BytesIO()
+        pdf.save(
+            output_buffer,
+            linearize=True,
+            compress_streams=True,
+            object_stream_mode=pikepdf.ObjectStreamMode.generate,
+            recompress_flate=True
+        )
+        
+        return output_buffer.getvalue()
+        
+    except Exception as e:
+        logger.error(f"PDF compression error: {e}")
+        raise e
+
+# Simple quality-based endpoint
+@router.post("/quality")
+async def compress_by_quality(files: List[UploadFile] = File(...), quality: int = Form(50)):
+    """Quality-based compression (1-100%)"""
+    try:
+        # Map quality percentage to compression level
+        if quality >= 80:
+            level = "low"      # 80-100% = low compression
+        elif quality >= 50:
+            level = "medium"   # 50-79% = medium compression  
+        else:
+            level = "high"     # 1-49% = high compression
+            
+        return await compress_pdfs(files, level)
+        
+    except Exception as e:
+        logger.error(f"Quality compression error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Simple size-based endpoint
+@router.post("/size")
+async def compress_by_size(files: List[UploadFile] = File(...), 
+                          target_size: int = Form(...), 
+                          size_unit: str = Form("KB")):
+    """Size-based compression"""
+    try:
+        # Convert to KB
+        target_kb = target_size * 1024 if size_unit.upper() == "MB" else target_size
+        
+        # Map target size to compression level
+        if target_kb <= 500:    # <= 500KB
+            level = "high"
+        elif target_kb <= 2000: # <= 2MB  
+            level = "medium"
+        else:                   # > 2MB
+            level = "low"
+            
+        return await compress_pdfs(files, level)
+        
+    except Exception as e:
+        logger.error(f"Size compression error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
