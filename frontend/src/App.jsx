@@ -23,7 +23,6 @@ function App() {
             <Route path="/split-pdf" element={<SplitPage />} />
             <Route path="/project-exporter" element={<ProjectExporterPage />} />
             <Route path="/compress-pdf" element={<CompressPage />} />
-            
             <Route path="/merge-complete" element={<MergeCompletePage />} />
             <Route path="/split-complete" element={<SplitCompletePage />} />
             <Route path="/compress-complete" element={<CompressCompletePage />} />
