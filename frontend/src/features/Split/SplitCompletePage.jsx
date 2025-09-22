@@ -3,7 +3,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Download, ArrowLeft, LoaderCircle, AlertTriangle } from 'lucide-react';
 
 const ensurePdfJsLib = () => new Promise(resolve => { const check = () => window.pdfjsLib ? resolve(window.pdfjsLib) : setTimeout(check, 100); check(); });
-const base64ToBlob = (base64, type) => { try { const byteCharacters = atob(base64.split(',')[1]); const byteNumbers = new Array(byteCharacters.length); for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); } const byteArray = new Uint8Array(byteNumbers); return new Blob([byteArray], { type }); } catch (e) { console.error("Failed to decode base64 string:", e); return null; }};
+const base64ToBlob = (base64, type) => { try { const byteCharacters = atob(base64.split(',')[1]); const byteNumbers = new Array(byteCharacters.length); for (let i = 0; i < byteCharacters.length; i++) { byteNumbers[i] = byteCharacters.charCodeAt(i); } const byteArray = new Uint8Array(byteNumbers); return new Blob([byteArray], { type }); } catch (e) { return null; }};
 
 const SplitCompletePage = () => {
     const location = useLocation();
@@ -63,7 +63,7 @@ const SplitCompletePage = () => {
             formData.append('file', blob, processedFile.name);
             formData.append('page_number', pageIndex);
             const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
-            const response = await fetch(`${apiUrl}/api/v1/extract-single-page`, { method: 'POST', body: formData });
+            const response = await fetch(`${apiUrl}/api/v1/split/extract-single-page`, { method: 'POST', body: formData });
             if (response.ok) {
                 const newBlob = await response.blob();
                 const url = URL.createObjectURL(newBlob);
@@ -116,7 +116,7 @@ const SplitCompletePage = () => {
                 </div>
             )}
              <div className="mt-12 text-center">
-                 <Link to="/split" className="inline-flex items-center font-semibold"><ArrowLeft className="mr-2" size={20} />Back to Split</Link>
+                 <Link to="/split-pdf" className="inline-flex items-center font-semibold"><ArrowLeft className="mr-2" size={20} />Back to Split</Link>
             </div>
         </div>
     );
