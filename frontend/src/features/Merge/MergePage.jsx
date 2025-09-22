@@ -19,7 +19,6 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { UploadCloud, LoaderCircle, Trash2, RotateCw } from 'lucide-react';
 
-// सॉर्टेबल पेज कंपोनेंट
 const SortablePage = ({ page, index, onRemove, onRotate }) => {
   const {
     attributes,
@@ -42,7 +41,6 @@ const SortablePage = ({ page, index, onRemove, onRotate }) => {
           src={page.thumbnail}
           alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`}
           className="w-full h-full object-contain rounded-lg transition-transform duration-300"
-          // --- मुख्य बदलाव यहाँ है ---
           style={{ transform: `rotate(${page.rotation}deg)` }}
         />
         <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -56,9 +54,7 @@ const SortablePage = ({ page, index, onRemove, onRotate }) => {
   );
 };
 
-// ... (बाकी का MergePage कंपोनेंट वही रहेगा)
 const MergePage = () => {
-    // ... (All other functions like onDrop, handleMerge, etc. are correct and unchanged)
     const [pages, setPages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [processingMessage, setProcessingMessage] = useState('');
