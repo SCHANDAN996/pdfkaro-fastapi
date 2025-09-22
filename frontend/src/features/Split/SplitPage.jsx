@@ -22,21 +22,28 @@ const SplitPage = () => {
 
         reader.onload = async (e) => {
             const typedarray = new Uint8Array(e.target.result);
-            const pdf = await pdfjsLib.getDocument(typedarray).promise;
-            const pageThumbnails = [];
+            try {
+                const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                const pageThumbnails = [];
 
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 0.5 });
-                const canvas = document.createElement('canvas');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                const context = canvas.getContext('2d');
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
-                pageThumbnails.push({ pageNum: i, thumbnail: canvas.toDataURL(), rotation: 0 }); // रोटेशन जोड़ा गया
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 0.5 });
+                    const canvas = document.createElement('canvas');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    const context = canvas.getContext('2d');
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    pageThumbnails.push({ pageNum: i, thumbnail: canvas.toDataURL(), rotation: 0 });
+                }
+                setPages(pageThumbnails);
+            } catch (error) {
+                console.error("Error processing PDF:", error);
+                alert("Could not process the PDF. It might be corrupted or protected.");
+                setFile(null);
+            } finally {
+                setIsProcessing(false);
             }
-            setPages(pageThumbnails);
-            setIsProcessing(false);
         };
         reader.readAsArrayBuffer(pdfFile);
     }, []);
@@ -46,11 +53,8 @@ const SplitPage = () => {
     const togglePageSelection = (pageNum) => {
         setSelectedPages(prev => {
             const newSelection = new Set(prev);
-            if (newSelection.has(pageNum)) {
-                newSelection.delete(pageNum);
-            } else {
-                newSelection.add(pageNum);
-            }
+            if (newSelection.has(pageNum)) newSelection.delete(pageNum);
+            else newSelection.add(pageNum);
             return newSelection;
         });
     };
@@ -79,7 +83,7 @@ const SplitPage = () => {
 
         try {
             const response = await fetch(`${apiUrl}/api/v1/split`, { method: 'POST', body: formData });
-            if (!response.ok) throw new Error('Split failed.');
+            if (!response.ok) throw new Error('Split failed on the server.');
             
             const newPdfBlob = await response.blob();
             const downloadUrl = URL.createObjectURL(newPdfBlob);
@@ -91,16 +95,26 @@ const SplitPage = () => {
                 navigate('/split-complete', { 
                     state: { 
                         downloadUrl: downloadUrl,
-                        processedFile: { data: base64File, name: "processed_pages.pdf" }
+                        processedFile: { data: base64File, name: selectedPages.size > 0 ? "extracted_pages.pdf" : "split_pages.zip" }
                     } 
                 });
             };
         } catch (error) {
-            alert('An error occurred.');
+            console.error("Split Error:", error);
+            alert('An error occurred. Please try again.');
             setIsProcessing(false);
         }
     };
     
+    if (isProcessing && pages.length === 0) {
+        return (
+            <div className="text-center h-96 flex flex-col justify-center items-center">
+                <LoaderCircle className="animate-spin text-slate-700" size={48} />
+                <p className="mt-4 text-slate-500">Processing your PDF...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="w-full max-w-6xl mx-auto p-4">
             <div className="text-center mb-8">
@@ -109,8 +123,10 @@ const SplitPage = () => {
             </div>
             
             {!file && (
-                 <div {...getRootProps()} className={`p-10 border-2 border-dashed ...`}>
-                    {/* ... Dropzone UI ... */}
+                 <div {...getRootProps()} className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragActive ? 'border-primary bg-slate-50' : 'border-slate-400'}`}>
+                    <input {...getInputProps()} />
+                    <UploadCloud size={48} className="mx-auto mb-4 text-slate-400" />
+                    <p className="font-semibold">Drag & drop a PDF file here, or click to select</p>
                 </div>
             )}
             
@@ -126,12 +142,12 @@ const SplitPage = () => {
                                     </div>
                                     <span className="absolute bottom-1 right-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{pageNum}</span>
                                 </div>
-                                <button onClick={() => handleRotatePage(pageNum)} className="absolute top-2 right-2 p-1.5 bg-slate-700 text-white rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity" title="Rotate 90°"><RotateCw size={14}/></button>
+                                <button onClick={(e) => { e.stopPropagation(); handleRotatePage(pageNum); }} className="absolute top-2 right-2 p-1.5 bg-slate-700/50 text-white rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity" title="Rotate 90°"><RotateCw size={14}/></button>
                             </div>
                         ))}
                     </div>
                      <div className="text-center mt-8">
-                        <button onClick={handleSplit} disabled={isProcessing} className="bg-slate-700 ...">
+                        <button onClick={handleSplit} disabled={isProcessing} className="bg-slate-700 text-white font-bold py-3 px-12 rounded-lg hover:bg-slate-800 disabled:bg-slate-400">
                             {selectedPages.size > 0 ? `Extract ${selectedPages.size} Page(s)` : 'Split All Pages into ZIP'}
                         </button>
                     </div>
