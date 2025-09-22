@@ -1,5 +1,11 @@
 from fastapi import APIRouter
-from .routes import merge, split, compress, project_exporter
+
+# Import routers correctly
+try:
+    from .routes import merge, split, compress, project_exporter
+except ImportError:
+    # For absolute imports when running directly
+    from api.routes import merge, split, compress, project_exporter
 
 api_router = APIRouter()
 
