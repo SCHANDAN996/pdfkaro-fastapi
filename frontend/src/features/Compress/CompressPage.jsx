@@ -1,218 +1,185 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useNavigate } from 'react-router-dom';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { UploadCloud, LoaderCircle, Trash2, RotateCw, Settings, SlidersHorizontal, Target } from 'lucide-react';
-
-const SortablePage = ({ page, index, onRemove, onRotate }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: page.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    touchAction: 'none',
-  };
-
-  const handleButtonClick = (e, action) => {
-    e.stopPropagation();
-    action();
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-40 flex-shrink-0 flex flex-col items-center">
-      <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group cursor-grab active:cursor-grabbing">
-        <img
-          src={page.thumbnail}
-          alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`}
-          className="w-full h-full object-contain rounded-lg transition-transform duration-300"
-          style={{ transform: `rotate(${page.rotation}deg)` }}
-        />
-        <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={(e) => handleButtonClick(e, () => onRotate(page.id))} className="p-1.5 bg-slate-700 text-white rounded-full focus:outline-none" title="Rotate 90°"><RotateCw size={14} /></button>
-          <button onClick={(e) => handleButtonClick(e, () => onRemove(page.id))} className="p-1.5 bg-red-500 text-white rounded-full focus:outline-none" title="Remove"><Trash2 size={14} /></button>
-        </div>
-        <span className="absolute bottom-1 left-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{index + 1}</span>
-      </div>
-      <p className="text-xs text-center truncate mt-1 px-1 w-full">{page.sourceFileName} (p.{page.pageIndex + 1})</p>
-    </div>
-  );
-};
+import { UploadCloud, LoaderCircle, Trash2, Settings, SlidersHorizontal, Target } from 'lucide-react';
 
 const CompressPage = () => {
-    const [pages, setPages] = useState([]);
+    const [files, setFiles] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [processingMessage, setProcessingMessage] = useState('');
     const [compressionMode, setCompressionMode] = useState('quality');
     const [qualityValue, setQualityValue] = useState(50);
     const [targetSize, setTargetSize] = useState('1024');
     const [sizeUnit, setSizeUnit] = useState('KB');
     const navigate = useNavigate();
 
-    const onDrop = useCallback(async (acceptedFiles) => {
+    const onDrop = useCallback((acceptedFiles) => {
         const pdfFiles = acceptedFiles.filter(file => file.type === 'application/pdf');
-        if (pdfFiles.length === 0) return;
-        setProcessingMessage('Extracting pages...');
-        setIsLoading(true);
-        try {
-            let newPages = [];
-            for (const file of pdfFiles) {
-                const pdfjsLib = await window.pdfjsLib;
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument(new Uint8Array(arrayBuffer)).promise;
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 0.5 });
-                    const canvas = document.createElement('canvas');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    const context = canvas.getContext('2d');
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-                    newPages.push({ id: `${file.name}_page_${i}_${Date.now()}_${Math.random()}`, sourceFile: file, sourceFileName: file.name, pageIndex: i - 1, thumbnail: canvas.toDataURL(), rotation: 0 });
-                }
-            }
-            setPages(p => [...p, ...newPages]);
-        } catch (error) {
-            alert("Could not process one or more PDF files.");
-        } finally {
-            setIsLoading(false);
-            setProcessingMessage('');
-        }
+        setFiles(prevFiles => [...prevFiles, ...pdfFiles]);
     }, []);
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'application/pdf': ['.pdf'] } });
-    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({ 
+        onDrop, 
+        accept: { 'application/pdf': ['.pdf'] } 
+    });
 
-    const handleDragEnd = (event) => {
-        const { active, over } = event;
-        if (active && over && active.id !== over.id) {
-            setPages((items) => {
-                const oldIndex = items.findIndex(item => item.id === active.id);
-                const newIndex = items.findIndex(item => item.id === over.id);
-                return arrayMove(items, oldIndex, newIndex);
-            });
-        }
+    const handleRemoveFile = (index) => {
+        setFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
     };
-    
-    const handleRemovePage = (id) => setPages(pages.filter(p => p.id !== id));
-    const handleRotatePage = (id) => setPages(pages.map(p => p.id === id ? { ...p, rotation: (p.rotation + 90) % 360 } : p));
 
     const handleCompress = async () => {
-        if (pages.length === 0) return;
-        setProcessingMessage('Compressing your PDF...');
+        if (files.length === 0) return;
+        
         setIsLoading(true);
-
         const formData = new FormData();
-        const filesToUpload = new Map();
-        pages.forEach(page => {
-            if (!filesToUpload.has(page.sourceFileName)) {
-                filesToUpload.set(page.sourceFileName, page.sourceFile);
-            }
+        
+        // Add all files
+        files.forEach(file => {
+            formData.append('files', file);
         });
-        filesToUpload.forEach(file => formData.append('files', file));
-        
-        const pageInstructions = pages.map(page => ({ sourceFile: page.sourceFileName, pageIndex: page.pageIndex, rotation: page.rotation }));
-        formData.append('pages_data', JSON.stringify(pageInstructions));
-        
-        const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
-        let endpoint = '';
 
-        if (compressionMode === 'quality') {
-            formData.append('quality', qualityValue / 100);
-            endpoint = '/api/v1/compress/quality';
-        } else {
-            const targetSizeInKB = sizeUnit === 'MB' ? parseFloat(targetSize) * 1024 : parseFloat(targetSize);
-            formData.append('target_size_kb', targetSizeInKB);
-            endpoint = '/api/v1/compress/size';
-        }
+        const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
+        let endpoint = '/api/v1/compress';
         
         try {
-            const response = await fetch(`${apiUrl}${endpoint}`, { method: 'POST', body: formData });
+            const response = await fetch(`${apiUrl}${endpoint}`, { 
+                method: 'POST', 
+                body: formData 
+            });
+            
             if (!response.ok) throw new Error('Compression failed.');
+            
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
             navigate('/compress-complete', { state: { downloadUrl: url } });
         } catch (error) {
+            console.error('Compression error:', error);
             alert('An error occurred. Please try again.');
+        } finally {
             setIsLoading(false);
         }
     };
-    
-    return (
-        <div className="w-full max-w-6xl mx-auto p-4">
-            <div className="text-center mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold">Compress PDF File</h1>
-                <p className="text-slate-600 mt-2">Arrange, edit, and compress pages from multiple PDFs into one optimized file.</p>
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center text-center h-96">
+                <LoaderCircle className="animate-spin text-slate-700" size={64} />
+                <h2 className="mt-6 text-2xl font-bold text-slate-800">Compressing your PDF...</h2>
             </div>
-            {isLoading ? (
-                <div className="flex flex-col items-center justify-center text-center h-96">
-                    <LoaderCircle className="animate-spin text-slate-700" size={64} />
-                    <h2 className="mt-6 text-2xl font-bold text-slate-800">{processingMessage}</h2>
-                </div>
-            ) : pages.length === 0 ? (
-                <div {...getRootProps()} className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragActive ? 'border-primary bg-slate-50' : 'border-slate-400'}`}>
+        );
+    }
+
+    return (
+        <div className="w-full max-w-4xl mx-auto p-4">
+            <div className="text-center mb-8">
+                <h1 className="text-3xl sm:text-4xl font-bold">Compress PDF Files</h1>
+                <p className="text-slate-600 mt-2">Reduce file size while maintaining quality</p>
+            </div>
+
+            {files.length === 0 ? (
+                <div {...getRootProps()} className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragActive ? 'border-slate-700 bg-slate-100' : 'border-slate-400'}`}>
                     <input {...getInputProps()} />
                     <UploadCloud size={48} className="mx-auto mb-4 text-slate-400" />
                     <p className="font-semibold">Drag & drop PDF files here</p>
+                    <p className="text-sm text-slate-500 mt-2">or click to select files</p>
                 </div>
             ) : (
                 <>
-                    <h3 className="text-xl font-bold text-center mt-8 mb-4">Arrange Pages ({pages.length})</h3>
-                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                        <SortableContext items={pages.map(p => p.id)} strategy={rectSortingStrategy}>
-                            <div className="flex flex-wrap gap-4 p-4 bg-slate-100 rounded-lg min-h-[220px] justify-center">
-                                {pages.map((page, index) => (<SortablePage key={page.id} page={page} index={index} onRemove={handleRemovePage} onRotate={handleRotatePage} />))}
-                            </div>
-                        </SortableContext>
-                    </DndContext>
-                    <div {...getRootProps()} className="mt-4 p-3 border-2 border-dashed rounded-lg text-center cursor-pointer text-sm text-slate-600 hover:bg-slate-50 hover:border-primary"><input {...getInputProps()} />Add more files...</div>
-                    <div className="mt-8 bg-white p-6 rounded-lg border w-full max-w-lg mx-auto">
-                        <h3 className="text-lg font-bold text-center mb-4 flex items-center justify-center gap-2"><Settings size={20}/>Compression Options</h3>
-                        <div className="flex justify-center mb-4 border border-slate-200 rounded-lg p-1">
-                            <button onClick={() => setCompressionMode('quality')} className={`w-1/2 p-2 rounded-md flex items-center justify-center gap-2 ${compressionMode === 'quality' ? 'bg-slate-700 text-white' : ''}`}><SlidersHorizontal size={16}/> By Quality</button>
-                            <button onClick={() => setCompressionMode('size')} className={`w-1/2 p-2 rounded-md flex items-center justify-center gap-2 ${compressionMode === 'size' ? 'bg-slate-700 text-white' : ''}`}><Target size={16}/> By Target Size</button>
+                    <div className="mb-6">
+                        <h3 className="text-lg font-bold mb-3">Selected Files ({files.length})</h3>
+                        <div className="space-y-2">
+                            {files.map((file, index) => (
+                                <div key={index} className="flex items-center justify-between p-3 bg-slate-100 rounded-lg">
+                                    <span className="truncate">{file.name}</span>
+                                    <button 
+                                        onClick={() => handleRemoveFile(index)}
+                                        className="p-1 bg-red-500 text-white rounded-full"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
+                    </div>
+
+                    <div {...getRootProps()} className="mt-4 p-3 border-2 border-dashed rounded-lg text-center cursor-pointer text-sm text-slate-600 hover:bg-slate-50">
+                        <input {...getInputProps()} />
+                        Add more files...
+                    </div>
+
+                    <div className="mt-8 bg-white p-6 rounded-lg border w-full max-w-lg mx-auto">
+                        <h3 className="text-lg font-bold text-center mb-4 flex items-center justify-center gap-2">
+                            <Settings size={20}/>Compression Options
+                        </h3>
+                        
+                        <div className="flex justify-center mb-4 border border-slate-200 rounded-lg p-1">
+                            <button 
+                                onClick={() => setCompressionMode('quality')} 
+                                className={`w-1/2 p-2 rounded-md flex items-center justify-center gap-2 ${compressionMode === 'quality' ? 'bg-slate-700 text-white' : ''}`}
+                            >
+                                <SlidersHorizontal size={16}/> By Quality
+                            </button>
+                            <button 
+                                onClick={() => setCompressionMode('size')} 
+                                className={`w-1/2 p-2 rounded-md flex items-center justify-center gap-2 ${compressionMode === 'size' ? 'bg-slate-700 text-white' : ''}`}
+                            >
+                                <Target size={16}/> By Target Size
+                            </button>
+                        </div>
+
                         {compressionMode === 'quality' ? (
                             <div>
-                                <label htmlFor="quality-slider" className="font-medium">Quality ({qualityValue}%)</label>
-                                <input id="quality-slider" type="range" min="1" max="100" value={qualityValue} onChange={(e) => setQualityValue(e.target.value)} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"/>
-                                <div className="flex justify-between text-xs text-slate-500 mt-1"><span>Less Quality</span><span>Best Quality</span></div>
+                                <label htmlFor="quality-slider" className="font-medium block mb-2">
+                                    Quality Level: {qualityValue}%
+                                </label>
+                                <input 
+                                    id="quality-slider" 
+                                    type="range" 
+                                    min="1" 
+                                    max="100" 
+                                    value={qualityValue} 
+                                    onChange={(e) => setQualityValue(parseInt(e.target.value))} 
+                                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                                <div className="flex justify-between text-xs text-slate-500 mt-1">
+                                    <span>Smaller File</span>
+                                    <span>Better Quality</span>
+                                </div>
                             </div>
                         ) : (
-                             <div>
-                                <label htmlFor="target-size" className="font-medium">Target Size (approx.)</label>
-                                <div className="flex items-center gap-2 mt-2">
-                                    <input id="target-size" type="number" value={targetSize} onChange={e => setTargetSize(e.target.value)} className="border rounded-md p-2 w-full"/>
-                                    <select value={sizeUnit} onChange={e => setSizeUnit(e.target.value)} className="border rounded-md p-2">
+                            <div>
+                                <label htmlFor="target-size" className="font-medium block mb-2">
+                                    Target Size (approx.)
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        id="target-size" 
+                                        type="number" 
+                                        value={targetSize} 
+                                        onChange={e => setTargetSize(e.target.value)} 
+                                        className="border rounded-md p-2 w-full"
+                                        min="1"
+                                    />
+                                    <select 
+                                        value={sizeUnit} 
+                                        onChange={e => setSizeUnit(e.target.value)} 
+                                        className="border rounded-md p-2"
+                                    >
                                         <option>KB</option>
                                         <option>MB</option>
                                     </select>
                                 </div>
-                             </div>
+                            </div>
                         )}
                     </div>
+
                     <div className="text-center mt-8">
-                        <button onClick={handleCompress} className="bg-slate-700 text-white font-bold py-3 px-12 rounded-lg hover:bg-slate-800">Compress & Download</button>
+                        <button 
+                            onClick={handleCompress} 
+                            className="bg-slate-700 text-white font-bold py-3 px-12 rounded-lg hover:bg-slate-800 disabled:bg-slate-400"
+                            disabled={files.length === 0}
+                        >
+                            Compress {files.length} PDF(s)
+                        </button>
                     </div>
                 </>
             )}
