@@ -1,4 +1,3 @@
-
 import io
 import json
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
@@ -10,9 +9,8 @@ import logging
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-@router.post("/merge")
+@router.post("/")
 async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form(...)):
-    # ... (merge_pdfs का पूरा लॉजिक यहाँ कॉपी करें)
     logger.info(f"Received {len(files)} files for merging.")
     try:
         page_instructions = json.loads(pages_data)
@@ -47,4 +45,4 @@ async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form
         )
     except Exception as e:
         logger.error(f"Error during merging: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Error during PDF merging process.")
