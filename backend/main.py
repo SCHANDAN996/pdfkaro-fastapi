@@ -1,3 +1,10 @@
+import sys
+from pathlib import Path
+
+# Add the backend directory to Python path
+current_dir = Path(__file__).parent
+sys.path.append(str(current_dir))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.api_router import api_router
