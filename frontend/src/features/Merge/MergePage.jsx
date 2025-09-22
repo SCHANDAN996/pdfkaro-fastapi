@@ -63,7 +63,46 @@ const MergePage = () => {
     const navigate = useNavigate();
 
     const onDrop = useCallback(async (acceptedFiles) => {
-        // ... (यह फंक्शन बदला नहीं गया है)
+        const pdfFiles = acceptedFiles.filter(file => file.type === 'application/pdf');
+        if (pdfFiles.length === 0) return;
+
+        setProcessingMessage('Extracting pages...');
+        setIsLoading(true);
+
+        try {
+            let newPages = [];
+            for (const file of pdfFiles) {
+                const pdfjsLib = await window.pdfjsLib;
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(new Uint8Array(arrayBuffer)).promise;
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 0.5 });
+                    const canvas = document.createElement('canvas');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    const context = canvas.getContext('2d');
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    
+                    newPages.push({
+                        id: `${file.name}_page_${i}_${Date.now()}_${Math.random()}`,
+                        sourceFile: file,
+                        sourceFileName: file.name,
+                        pageIndex: i - 1,
+                        thumbnail: canvas.toDataURL(),
+                        rotation: 0
+                    });
+                }
+            }
+            setPages(p => [...p, ...newPages]);
+        } catch (error) {
+            console.error("Failed to extract pages:", error);
+            alert("Could not process one or more PDF files. Please ensure they are valid PDFs.");
+        } finally {
+            setIsLoading(false);
+            setProcessingMessage('');
+        }
     }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'application/pdf': ['.pdf'] } });
@@ -88,20 +127,76 @@ const MergePage = () => {
     const handleRotatePage = (id) => setPages(pages.map(p => p.id === id ? { ...p, rotation: (p.rotation + 90) % 360 } : p));
 
     const handleMerge = async () => {
-        // ... (यह फंक्शन बदला नहीं गया है)
+        if (pages.length === 0) {
+            alert('Please add some PDF pages to merge.');
+            return;
+        }
+        setProcessingMessage('Merging your pages...');
+        setIsLoading(true);
+
+        const formData = new FormData();
+        const filesToUpload = new Map();
+        pages.forEach(page => {
+            if (!filesToUpload.has(page.sourceFileName)) {
+                filesToUpload.set(page.sourceFileName, page.sourceFile);
+            }
+        });
+        filesToUpload.forEach(file => formData.append('files', file));
+        
+        const pageInstructions = pages.map(page => ({
+            sourceFile: page.sourceFileName,
+            pageIndex: page.pageIndex,
+            rotation: page.rotation
+        }));
+
+        formData.append('pages_data', JSON.stringify(pageInstructions));
+        const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
+
+        try {
+            const response = await fetch(`${apiUrl}/api/v1/merge`, { method: 'POST', body: formData });
+            if (!response.ok) throw new Error('Merge failed on the server.');
+            
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            navigate('/merge-complete', { 
+                state: { 
+                    downloadUrl: url,
+                    fileName: 'merged_by_PDFkaro.in.pdf'
+                } 
+            });
+        } catch (error) {
+            console.error("Merge error:", error);
+            alert('An error occurred. Please check your connection and try again.');
+        } finally {
+            setIsLoading(false);
+            setProcessingMessage('');
+        }
     };
 
-    // ... (बाकी का कोड वही रहेगा, मैंने उसे संक्षिप्त कर दिया है)
-    // You can copy the full code for onDrop and handleMerge from my previous response.
-    // The main changes are in the libraries, the SortablePage component, and the JSX structure.
-
-    if (isLoading) { /* ... Loading UI ... */ }
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center text-center h-96">
+                <LoaderCircle className="animate-spin text-slate-700" size={64} />
+                <h2 className="mt-6 text-2xl font-bold text-slate-800">{processingMessage}</h2>
+                <p className="text-slate-500">Please wait, this may take a moment.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full max-w-6xl mx-auto p-4">
-            {/* ... (Title and Dropzone for initial upload) ... */}
+            <div className="text-center mb-8">
+                <h1 className="text-3xl sm:text-4xl font-bold">Merge PDF Files</h1>
+                <p className="text-slate-600 mt-2">Combine and reorder pages from multiple PDFs into one single document.</p>
+            </div>
 
-            {pages.length > 0 && (
+            {pages.length === 0 ? (
+                <div {...getRootProps()} className={`p-10 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragActive ? 'border-primary bg-slate-50' : 'border-slate-400'}`}>
+                    <input {...getInputProps()} />
+                    <UploadCloud size={48} className="mx-auto mb-4 text-slate-400" />
+                    <p className="font-semibold">Drag & drop PDF files here</p>
+                </div>
+            ) : (
                 <>
                     <h3 className="text-xl font-bold text-center mt-8 mb-4">Arrange Your Pages ({pages.length})</h3>
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -114,7 +209,16 @@ const MergePage = () => {
                         </SortableContext>
                     </DndContext>
                     
-                    {/* ... (Add more files button and Merge button) ... */}
+                    <div {...getRootProps()} className="mt-4 p-3 border-2 border-dashed rounded-lg text-center cursor-pointer text-sm text-slate-600 hover:bg-slate-50 hover:border-primary">
+                        <input {...getInputProps()} />
+                        Add more files...
+                    </div>
+
+                    <div className="text-center mt-8">
+                        <button onClick={handleMerge} className="bg-slate-700 text-white font-bold py-3 px-12 rounded-lg hover:bg-slate-800">
+                            Merge {pages.length} Pages
+                        </button>
+                    </div>
                 </>
             )}
         </div>
