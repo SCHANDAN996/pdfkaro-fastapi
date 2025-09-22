@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, LoaderCircle, Trash2, RotateCw } from 'lucide-react';
+import { UploadCloud, LoaderCircle, Trash2, RotateCw, GripVertical } from 'lucide-react';
 
 const MergePage = () => {
     const [pages, setPages] = useState([]);
@@ -151,15 +151,19 @@ const MergePage = () => {
                     <DragDropContext onDragEnd={handleOnDragEnd}>
                         <Droppable droppableId="pages">
                             {(provided) => (
-                                // --- बदलाव यहाँ है: 'grid' को 'flex flex-wrap' से बदला गया ہے ---
                                 <div {...provided.droppableProps} ref={provided.innerRef} className="flex flex-wrap gap-4 p-4 bg-slate-100 rounded-lg min-h-[220px] justify-center">
                                     {pages.map((page, index) => (
                                         <Draggable key={page.id} draggableId={page.id} index={index}>
                                             {(provided) => (
-                                                // --- बदलाव यहाँ है: हर आइटम को एक निश्चित चौड़ाई दी गई है ---
-                                                <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps} className="w-40 flex-shrink-0">
+                                                <div ref={provided.innerRef} {...provided.draggableProps} className="w-40 flex-shrink-0 flex flex-col items-center">
                                                     <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
                                                         <img src={page.thumbnail} alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`} className="w-full h-full object-contain rounded-lg"/>
+                                                        
+                                                        {/* --- बदलाव यहाँ है: यह समर्पित ड्रैग हैंडल है --- */}
+                                                        <div {...provided.dragHandleProps} className="absolute top-1 left-1 p-1.5 cursor-grab active:cursor-grabbing bg-white/50 rounded-full">
+                                                            <GripVertical size={16} className="text-slate-600"/>
+                                                        </div>
+
                                                         <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button onClick={() => handleRotatePage(page.id)} className="p-1.5 bg-slate-700 text-white rounded-full" title="Rotate 90°"><RotateCw size={14} /></button>
                                                             <button onClick={() => handleRemovePage(page.id)} className="p-1.5 bg-red-500 text-white rounded-full" title="Remove"><Trash2 size={14} /></button>
@@ -167,7 +171,7 @@ const MergePage = () => {
                                                         <span className="absolute bottom-1 left-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{index + 1}</span>
                                                         {page.rotation > 0 && <span className="absolute bottom-1 right-1 px-2 py-0.5 text-xs bg-blue-500 text-white rounded">{page.rotation}°</span>}
                                                     </div>
-                                                    <p className="text-xs text-center truncate mt-1 px-1">{page.sourceFileName} (p.{page.pageIndex + 1})</p>
+                                                    <p className="text-xs text-center truncate mt-1 px-1 w-full">{page.sourceFileName} (p.{page.pageIndex + 1})</p>
                                                 </div>
                                             )}
                                         </Draggable>
