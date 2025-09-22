@@ -90,30 +90,32 @@ async def merge_pdfs(files: List[UploadFile] = File(...), pages_data: str = Form
 
 @app.post("/api/v1/split")
 async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(...)):
-    """Splits a PDF into multiple pages or extracts selected pages."""
+    """Splits a PDF into multiple pages or extracts selected pages with rotation."""
     try:
-        selected_pages_indices = json.loads(pages_to_extract)
-        
-        logger.info(f"Received request to split file: {file.filename}")
-        logger.info(f"Page indices to extract: {selected_pages_indices}")
+        page_instructions = json.loads(pages_to_extract)
+        logger.info(f"Page instructions received: {page_instructions}")
 
         pdf_bytes = await file.read()
         source_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
         
         output_buffer = io.BytesIO()
 
-        if selected_pages_indices:
-            logger.info("Extracting selected pages into a new PDF.")
+        if page_instructions:
             new_pdf = pikepdf.Pdf.new()
-            for index in selected_pages_indices:
+            for instruction in page_instructions:
+                index = instruction['pageIndex']
+                rotation = instruction.get('rotation', 0)
                 if 0 <= index < len(source_pdf.pages):
-                    new_pdf.pages.append(source_pdf.pages[index])
+                    page = source_pdf.pages[index]
+                    if rotation != 0:
+                        page.rotate(rotation, relative=True)
+                    new_pdf.pages.append(page)
             
             new_pdf.save(output_buffer)
             filename = "extracted_pages_by_PDFkaro.in.pdf"
             media_type = "application/pdf"
+        
         else:
-            logger.info("No pages selected. Splitting all pages into a ZIP archive.")
             with zipfile.ZipFile(output_buffer, 'w') as zip_file:
                 for i, page in enumerate(source_pdf.pages):
                     dst = pikepdf.Pdf.new()
@@ -163,7 +165,6 @@ async def extract_single_page(file: UploadFile = File(...), page_number: int = F
         logger.error(f"Error extracting single page: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-# --- नया कंप्रेशन एंडपॉइंट ---
 @app.post("/api/v1/compress")
 async def compress_pdfs(files: List[UploadFile] = File(...), level: str = Form("recommended")):
     logger.info(f"Received {len(files)} files for compression with level: {level}")
@@ -217,7 +218,7 @@ async def compress_pdfs(files: List[UploadFile] = File(...), level: str = Form("
         headers={"Content-Disposition": "attachment; filename=compressed_by_PDFkaro.in.zip"}
     )
 
-# --- Project Exporter Tool Endpoints ---
+# --- Project Exporter Tool Helper Functions & Endpoints ---
 def create_tree_structure(files: List[FileData]):
     structure = {}
     for file in files:
@@ -244,66 +245,69 @@ def generate_aligned_output(structure: Dict, path_prefix="", is_last=True):
 
 @app.post("/api/v1/process-structure")
 async def process_structure(request: ProcessRequest):
-    # ... (code is unchanged)
-    pass
+    try:
+        final_content = ""
+        if request.align_structure:
+            file_structure = create_tree_structure(request.files)
+            final_content += "Project Structure:\n"
+            final_content += generate_aligned_output(file_structure)
+            final_content += "\n" + ("=" * 50) + "\n\n"
+        for file_data in request.files:
+            if request.include_paths:
+                final_content += f"--- File: {file_data.path} ---\n\n"
+            final_content += file_data.content + "\n\n"
+            if request.include_paths:
+                final_content += f"--- End of File: {file_data.path} ---\n\n" + ("=" * 50) + "\n\n"
+        if request.output_format == "docx":
+            doc = docx.Document()
+            doc.add_paragraph(final_content)
+            buffer = io.BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+            media_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            filename = "project_export_by_PDFkaro.in.docx"
+        else:
+            buffer = io.BytesIO(final_content.encode('utf-8'))
+            media_type = "text/plain"
+            filename = "project_export_by_PDFkaro.in.txt"
+        return StreamingResponse(buffer, media_type=media_type, headers={"Content-Disposition": f"attachment; filename={filename}"})
+    except Exception as e:
+        logger.error(f"Error processing structure: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/v1/export-zip-structure")
 async def export_zip_structure(request: ProcessRequest):
-    # ... (code is unchanged)
-    pass
-
-
-# ... (main.py में अन्य सभी कोड वही रहेंगे)
-
-@app.post("/api/v1/split")
-async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(...)):
     try:
-        # अब pages_to_extract में पेज इंडेक्स के साथ रोटेशन भी आएगा
-        page_instructions = json.loads(pages_to_extract)
-        
-        logger.info(f"Page instructions received: {page_instructions}")
-
-        pdf_bytes = await file.read()
-        source_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
-        
-        output_buffer = io.BytesIO()
-
-        # अगर यूजर ने कुछ पेज चुने हैं
-        if page_instructions:
-            new_pdf = pikepdf.Pdf.new()
-            for instruction in page_instructions:
-                index = instruction['pageIndex']
-                rotation = instruction.get('rotation', 0)
-                if 0 <= index < len(source_pdf.pages):
-                    page = source_pdf.pages[index]
-                    if rotation != 0:
-                        page.rotate(rotation, relative=True)
-                    new_pdf.pages.append(page)
-            
-            new_pdf.save(output_buffer)
-            filename = "extracted_pages_by_PDFkaro.in.pdf"
-            media_type = "application/pdf"
-        
-        # अगर कोई पेज नहीं चुना है (सभी को अलग-अलग करें)
-        else:
-            with zipfile.ZipFile(output_buffer, 'w') as zip_file:
-                for i, page in enumerate(source_pdf.pages):
-                    dst = pikepdf.Pdf.new()
-                    dst.pages.append(page)
-                    page_buffer = io.BytesIO()
-                    dst.save(page_buffer)
-                    page_buffer.seek(0)
-                    zip_file.writestr(f"page_{i+1}_by_PDFkaro.in.pdf", page_buffer.getvalue())
-            
-            filename = "split_files_by_PDFkaro.in.zip"
-            media_type = "application/zip"
-
-        output_buffer.seek(0)
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            if request.align_structure:
+                tree_structure = create_tree_structure(request.files)
+                summary_content = "Project Structure:\n"
+                summary_content += generate_aligned_output(tree_structure)
+                zip_file.writestr("00_project_structure.txt", summary_content)
+            for file_data in request.files:
+                file_content = ""
+                if request.include_paths:
+                    file_content += f"--- File: {file_data.path} ---\n\n"
+                file_content += file_data.content
+                if request.output_format == "docx":
+                    doc = docx.Document()
+                    doc.add_paragraph(file_content)
+                    file_buffer = io.BytesIO()
+                    doc.save(file_buffer)
+                    file_buffer.seek(0)
+                    base_name = os.path.splitext(file_data.path)[0]
+                    file_name_in_zip = f"{base_name}.docx"
+                    zip_file.writestr(file_name_in_zip, file_buffer.getvalue())
+                else:
+                    file_name_in_zip = f"{file_data.path}.txt" if not file_data.path.endswith('.txt') else file_data.path
+                    zip_file.writestr(file_name_in_zip, file_content.encode('utf-8'))
+        zip_buffer.seek(0)
         return StreamingResponse(
-            output_buffer,
-            media_type=media_type,
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            zip_buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": "attachment; filename=project_export_by_PDFkaro.in.zip"}
         )
     except Exception as e:
-        logger.error(f"Error during splitting: {e}", exc_info=True)
+        logger.error(f"Error creating zip archive: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
