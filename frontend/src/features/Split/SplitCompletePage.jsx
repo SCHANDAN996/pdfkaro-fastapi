@@ -8,14 +8,13 @@ const base64ToBlob = (base64, type) => { try { const byteCharacters = atob(base6
 const SplitCompletePage = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { downloadUrl, processedFile } = location.state || {}; // <-- बदला हुआ नाम
+    const { downloadUrl, processedFile } = location.state || {};
 
     const [pagePreviews, setPagePreviews] = useState([]);
     const [isLoading, setIsLoading] = useState(!!processedFile);
     const [error, setError] = useState('');
 
     const generateThumbnails = useCallback(async () => {
-        // --- यहाँ बदलाव किया गया है ---
         if (!processedFile || !processedFile.data) {
             setIsLoading(false);
             setError('Processed file data is missing, cannot generate previews.');
@@ -24,14 +23,13 @@ const SplitCompletePage = () => {
         try {
             const pdfjsLib = await ensurePdfJsLib();
             const blob = base64ToBlob(processedFile.data, 'application/pdf');
-            if (!blob) throw new Error("Could not convert processed file data to a Blob.");
+            if (!blob) throw new Error("Could not convert processed file data.");
+            
             const arrayBuffer = await blob.arrayBuffer();
             const typedarray = new Uint8Array(arrayBuffer);
             const pdf = await pdfjsLib.getDocument(typedarray).promise;
 
-            if (pdf.numPages === 0) {
-                throw new Error("The resulting PDF file seems to have 0 pages.");
-            }
+            if (pdf.numPages === 0) throw new Error("The resulting PDF file has 0 pages.");
             
             const thumbnails = [];
             for (let i = 1; i <= pdf.numPages; i++) {
@@ -47,24 +45,49 @@ const SplitCompletePage = () => {
             setPagePreviews(thumbnails);
         } catch (err) {
             console.error("Error generating thumbnails:", err);
-            setError("Could not generate page previews, but you can still download your file.");
+            setError("Could not generate previews, but you can still download your file.");
         } finally {
             setIsLoading(false);
         }
     }, [processedFile]);
-
+    
     useEffect(() => {
         if (!downloadUrl || !processedFile) {
             navigate('/');
         } else {
             generateThumbnails();
         }
-        return () => {
-            if (downloadUrl) URL.revokeObjectURL(downloadUrl);
-        }
+        return () => { if (downloadUrl) URL.revokeObjectURL(downloadUrl); }
     }, [downloadUrl, processedFile, generateThumbnails, navigate]);
     
-    // --- सिंगल-पेज डाउनलोड फंक्शन हटा दिया गया है ---
+    // --- यह फंक्शन वापस जोड़ा गया है ---
+    const handleSinglePageDownload = async (pageIndex) => {
+        try {
+            const blob = base64ToBlob(processedFile.data, 'application/pdf');
+            const formData = new FormData();
+            formData.append('file', blob, processedFile.name);
+            formData.append('page_number', pageIndex);
+
+            const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
+            const response = await fetch(`${apiUrl}/api/v1/extract-single-page`, { method: 'POST', body: formData });
+
+            if (response.ok) {
+                const newBlob = await response.blob();
+                const url = URL.createObjectURL(newBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `page_${pageIndex + 1}_by_PDFkaro.in.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } else {
+                setError("Failed to download single page.");
+            }
+        } catch (err) {
+            setError("An error occurred while downloading the page.");
+        }
+    };
 
     return (
         <div className="w-full max-w-6xl mx-auto p-4">
@@ -87,9 +110,14 @@ const SplitCompletePage = () => {
             ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-4 bg-slate-100 rounded-lg">
                     {pagePreviews.map(page => (
-                        // --- बटन हटा दिया गया है, अब यह सिर्फ प्रीव्यू है ---
-                        <div key={page.id} className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border">
+                        <div key={page.id} className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
                             <img src={page.thumbnail} alt={`Page ${page.pageIndex + 1}`} className="w-full h-full object-contain rounded-lg"/>
+                            {/* --- डाउनलोड बटन वापस जोड़ा गया है --- */}
+                            <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-50 transition-opacity flex items-center justify-center rounded-lg">
+                                <button onClick={() => handleSinglePageDownload(page.pageIndex)} className="p-2 bg-white rounded-full text-slate-700 opacity-0 group-hover:opacity-100" title="Download this page">
+                                    <Download size={20} />
+                                </button>
+                            </div>
                             <span className="absolute bottom-1 right-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{page.pageIndex + 1}</span>
                         </div>
                     ))}
