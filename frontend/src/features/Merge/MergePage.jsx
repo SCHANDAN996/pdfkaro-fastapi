@@ -17,13 +17,13 @@ import {
 } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { UploadCloud, LoaderCircle, Trash2, RotateCw, GripVertical } from 'lucide-react';
+import { UploadCloud, LoaderCircle, Trash2, RotateCw } from 'lucide-react';
 
-// सॉर्टेबल पेज कंपोनेंट (अपडेटेड)
+// एक नया और बेहतर सॉर्टेबल पेज कंपोनेंट
 const SortablePage = ({ page, index, onRemove, onRotate }) => {
   const {
     attributes,
-    listeners, // यह अब सिर्फ ड्रैग हैंडल पर लगेगा
+    listeners,
     setNodeRef,
     transform,
     transition,
@@ -32,38 +32,39 @@ const SortablePage = ({ page, index, onRemove, onRotate }) => {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    touchAction: 'none',
+    touchAction: 'none', // स्मूथ मोबाइल ड्रैगिंग के लिए
+  };
+
+  // स्टॉप प्रोपेगेशन फंक्शन ताकि बटन क्लिक ड्रैग को न शुरू करे
+  const handleButtonClick = (e, action) => {
+    e.stopPropagation();
+    action();
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} className="w-40 flex-shrink-0 flex flex-col items-center">
-      <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
+    <div ref={setNodeRef} style={style} className="w-40 flex-shrink-0 flex flex-col items-center">
+      <div 
+        className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group cursor-grab active:cursor-grabbing"
+        {...attributes}
+        {...listeners} // ड्रैग हैंडल पूरे कार्ड पर है
+      >
         <img
           src={page.thumbnail}
           alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`}
-          className="w-full h-full object-contain rounded-lg transition-transform duration-300"
+          className="w-full h-full object-contain rounded-lg transition-transform duration-300 pointer-events-none"
           style={{ transform: `rotate(${page.rotation}deg)` }}
         />
-        
-        {/* --- मुख्य बदलाव यहाँ है: ड्रैग हैंडल और बटन अलग-अलग हैं --- */}
-        <div 
-          {...listeners} // ड्रैग हैंडल सिर्फ इस आइकन पर है
-          className="absolute top-1 left-1 p-1.5 cursor-grab active:cursor-grabbing bg-white/60 backdrop-blur-sm rounded-full"
-        >
-          <GripVertical size={16} className="text-slate-700"/>
-        </div>
-
-        <div className="absolute top-1 right-1 flex flex-col gap-1">
+        <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button 
-            onClick={() => onRotate(page.id)} 
-            className="p-1.5 bg-slate-700 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+            onClick={(e) => handleButtonClick(e, () => onRotate(page.id))} 
+            className="p-1.5 bg-slate-700 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-slate-500" 
             title="Rotate 90°"
           >
             <RotateCw size={14} />
           </button>
           <button 
-            onClick={() => onRemove(page.id)} 
-            className="p-1.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity" 
+            onClick={(e) => handleButtonClick(e, () => onRemove(page.id))} 
+            className="p-1.5 bg-red-500 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-red-400" 
             title="Remove"
           >
             <Trash2 size={14} />
@@ -77,8 +78,7 @@ const SortablePage = ({ page, index, onRemove, onRotate }) => {
 };
 
 
-const MergePage = ({/*...all props from previous full code...*/}) => {
-    // ... (All functions and state from the previous full code are correct)
+const MergePage = () => {
     const [pages, setPages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [processingMessage, setProcessingMessage] = useState('');
@@ -124,7 +124,7 @@ const MergePage = ({/*...all props from previous full code...*/}) => {
     }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'application/pdf': ['.pdf'] } });
-    const sensors = useSensors(useSensor(PointerSensor), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
+    const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
     const handleDragEnd = (event) => {
         const { active, over } = event;
@@ -141,10 +141,7 @@ const MergePage = ({/*...all props from previous full code...*/}) => {
     const handleRotatePage = (id) => setPages(pages.map(p => p.id === id ? { ...p, rotation: (p.rotation + 90) % 360 } : p));
 
     const handleMerge = async () => {
-        if (pages.length === 0) {
-            alert('Please add some PDF pages to merge.');
-            return;
-        }
+        if (pages.length === 0) return;
         setProcessingMessage('Merging your pages...');
         setIsLoading(true);
         const formData = new FormData();
@@ -155,11 +152,7 @@ const MergePage = ({/*...all props from previous full code...*/}) => {
             }
         });
         filesToUpload.forEach(file => formData.append('files', file));
-        const pageInstructions = pages.map(page => ({
-            sourceFile: page.sourceFileName,
-            pageIndex: page.pageIndex,
-            rotation: page.rotation
-        }));
+        const pageInstructions = pages.map(page => ({ sourceFile: page.sourceFileName, pageIndex: page.pageIndex, rotation: page.rotation }));
         formData.append('pages_data', JSON.stringify(pageInstructions));
         const apiUrl = 'https://pdfkaro-fastapi.onrender.com';
         try {
@@ -169,7 +162,6 @@ const MergePage = ({/*...all props from previous full code...*/}) => {
             const url = URL.createObjectURL(blob);
             navigate('/merge-complete', { state: { downloadUrl: url, fileName: 'merged_by_PDFkaro.in.pdf' } });
         } catch (error) {
-            console.error("Merge error:", error);
             alert('An error occurred. Please try again.');
             setIsLoading(false);
             setProcessingMessage('');
@@ -184,7 +176,7 @@ const MergePage = ({/*...all props from previous full code...*/}) => {
             </div>
 
             {isLoading ? (
-                 <div className="flex flex-col items-center justify-center text-center h-96">
+                <div className="flex flex-col items-center justify-center text-center h-96">
                     <LoaderCircle className="animate-spin text-slate-700" size={64} />
                     <h2 className="mt-6 text-2xl font-bold text-slate-800">{processingMessage}</h2>
                     <p className="text-slate-500">Please wait, this may take a moment.</p>
@@ -223,4 +215,5 @@ const MergePage = ({/*...all props from previous full code...*/}) => {
         </div>
     );
 };
+
 export default MergePage;
