@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .api.api_router import api_router # <-- नया इम्पोर्ट
+from .api.api_router import api_router
 
 app = FastAPI(title="PDFkaro.in Backend")
 
-# CORS middleware
 origins = ["*"]
 app.add_middleware(
     CORSMiddleware,
