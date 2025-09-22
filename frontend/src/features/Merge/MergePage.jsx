@@ -1,8 +1,59 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import { useNavigate } from 'react-router-dom';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { UploadCloud, LoaderCircle, Trash2, RotateCw } from 'lucide-react';
+
+// एक नया सॉर्टेबल पेज कंपोनेंट
+const SortablePage = ({ page, onRemove, onRotate }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: page.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="w-40 flex-shrink-0 flex flex-col items-center touch-none">
+      <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
+        <img
+          src={page.thumbnail}
+          alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`}
+          className="w-full h-full object-contain rounded-lg transition-transform duration-300"
+          style={{ transform: `rotate(${page.rotation}deg)` }}
+        />
+        <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button onClick={() => onRotate(page.id)} className="p-1.5 bg-slate-700 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-slate-500" title="Rotate 90°"><RotateCw size={14} /></button>
+          <button onClick={() => onRemove(page.id)} className="p-1.5 bg-red-500 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-red-400" title="Remove"><Trash2 size={14} /></button>
+        </div>
+        <span className="absolute bottom-1 left-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{page.displayIndex + 1}</span>
+      </div>
+      <p className="text-xs text-center truncate mt-1 px-1 w-full">{page.sourceFileName} (p.{page.pageIndex + 1})</p>
+    </div>
+  );
+};
+
 
 const MergePage = () => {
     const [pages, setPages] = useState([]);
@@ -53,32 +104,29 @@ const MergePage = () => {
         }
     }, []);
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({
-        onDrop,
-        accept: { 'application/pdf': ['.pdf'] }
-    });
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, accept: { 'application/pdf': ['.pdf'] } });
+    
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    );
 
-    const handleOnDragEnd = (result) => {
-        if (!result.destination) return;
-        const items = Array.from(pages);
-        const [reorderedItem] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, reorderedItem);
-        setPages(items);
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+        if (active.id !== over.id) {
+            setPages((items) => {
+                const oldIndex = items.findIndex(item => item.id === active.id);
+                const newIndex = items.findIndex(item => item.id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
     };
 
-    const handleRemovePage = (id) => {
-        setPages(pages.filter(p => p.id !== id));
-    };
-
-    const handleRotatePage = (id) => {
-        setPages(pages.map(p => p.id === id ? { ...p, rotation: (p.rotation + 90) % 360 } : p));
-    };
+    const handleRemovePage = (id) => setPages(pages.filter(p => p.id !== id));
+    const handleRotatePage = (id) => setPages(pages.map(p => p.id === id ? { ...p, rotation: (p.rotation + 90) % 360 } : p));
 
     const handleMerge = async () => {
-        if (pages.length === 0) {
-            alert('Please add some PDF pages to merge.');
-            return;
-        }
+        if (pages.length === 0) return;
         setProcessingMessage('Merging your pages...');
         setIsLoading(true);
 
@@ -106,12 +154,7 @@ const MergePage = () => {
             
             const blob = await response.blob();
             const url = URL.createObjectURL(blob);
-            navigate('/merge-complete', { 
-                state: { 
-                    downloadUrl: url,
-                    fileName: 'merged_by_PDFkaro.in.pdf'
-                } 
-            });
+            navigate('/merge-complete', { state: { downloadUrl: url, fileName: 'merged_by_PDFkaro.in.pdf' } });
         } catch (error) {
             console.error("Merge error:", error);
             alert('An error occurred. Please check your connection and try again.');
@@ -143,43 +186,19 @@ const MergePage = () => {
                     <input {...getInputProps()} />
                     <UploadCloud size={48} className="mx-auto mb-4 text-slate-400" />
                     <p className="font-semibold">Drag & drop PDF files here</p>
-                    <p className="text-sm text-slate-500 mt-1">(Or click to select files)</p>
                 </div>
             ) : (
                 <>
                     <h3 className="text-xl font-bold text-center mt-8 mb-4">Arrange Your Pages ({pages.length})</h3>
-                    <DragDropContext onDragEnd={handleOnDragEnd}>
-                        <Droppable droppableId="pages">
-                            {(provided) => (
-                                <div {...provided.droppableProps} ref={provided.innerRef} className="flex flex-wrap gap-4 p-4 bg-slate-100 rounded-lg min-h-[220px] justify-center">
-                                    {pages.map((page, index) => (
-                                        <Draggable key={page.id} draggableId={page.id} index={index}>
-                                            {(provided) => (
-                                                <div 
-                                                  ref={provided.innerRef} 
-                                                  {...provided.draggableProps} 
-                                                  {...provided.dragHandleProps} // <-- ड्रैग हैंडल पूरे डिव पर वापस लगा दिया गया है
-                                                  className="w-40 flex-shrink-0 flex flex-col items-center cursor-grab active:cursor-grabbing"
-                                                >
-                                                    <div className="relative w-full aspect-[2/3] bg-white rounded-lg shadow-md border group">
-                                                        <img src={page.thumbnail} alt={`${page.sourceFileName} - Page ${page.pageIndex + 1}`} className="w-full h-full object-contain rounded-lg"/>
-                                                        <div className="absolute top-1 right-1 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button onClick={() => handleRotatePage(page.id)} className="p-1.5 bg-slate-700 text-white rounded-full" title="Rotate 90°"><RotateCw size={14} /></button>
-                                                            <button onClick={() => handleRemovePage(page.id)} className="p-1.5 bg-red-500 text-white rounded-full" title="Remove"><Trash2 size={14} /></button>
-                                                        </div>
-                                                        <span className="absolute bottom-1 left-1 px-2 py-0.5 text-xs bg-slate-800 text-white rounded">{index + 1}</span>
-                                                        {page.rotation > 0 && <span className="absolute bottom-1 right-1 px-2 py-0.5 text-xs bg-blue-500 text-white rounded">{page.rotation}°</span>}
-                                                    </div>
-                                                    <p className="text-xs text-center truncate mt-1 px-1 w-full">{page.sourceFileName} (p.{page.pageIndex + 1})</p>
-                                                </div>
-                                            )}
-                                        </Draggable>
-                                    ))}
-                                    {provided.placeholder}
-                                </div>
-                            )}
-                        </Droppable>
-                    </DragDropContext>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                        <SortableContext items={pages} strategy={rectSortingStrategy}>
+                            <div className="flex flex-wrap gap-4 p-4 bg-slate-100 rounded-lg min-h-[220px] justify-center">
+                                {pages.map((page, index) => (
+                                    <SortablePage key={page.id} page={{...page, displayIndex: index}} onRemove={handleRemovePage} onRotate={handleRotatePage} />
+                                ))}
+                            </div>
+                        </SortableContext>
+                    </DndContext>
                     
                     <div {...getRootProps()} className="mt-4 p-3 border-2 border-dashed rounded-lg text-center cursor-pointer text-sm text-slate-600 hover:bg-slate-50 hover:border-primary">
                         <input {...getInputProps()} />
