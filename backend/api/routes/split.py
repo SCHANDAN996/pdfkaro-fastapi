@@ -18,11 +18,13 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
         source_pdf = pikepdf.Pdf.open(io.BytesIO(pdf_bytes))
         output_buffer = io.BytesIO()
 
-        if page_instructions:
+        if page_instructions and isinstance(page_instructions, list) and len(page_instructions) > 0:
             new_pdf = pikepdf.Pdf.new()
             for instruction in page_instructions:
-                index = instruction['pageIndex']
-                rotation = instruction.get('rotation', 0)
+                # Yahan correction - instruction se pageIndex extract karo
+                index = instruction['pageIndex'] if isinstance(instruction, dict) and 'pageIndex' in instruction else instruction
+                rotation = instruction.get('rotation', 0) if isinstance(instruction, dict) else 0
+                
                 if 0 <= index < len(source_pdf.pages):
                     page = source_pdf.pages[index]
                     if rotation != 0:
@@ -47,7 +49,7 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
         return StreamingResponse(output_buffer, media_type=media_type, headers={"Content-Disposition": f"attachment; filename={filename}"})
     except Exception as e:
         logger.error(f"Error during splitting: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error during PDF splitting process.")
+        raise HTTPException(status_code=500, detail="Error during PDF splitting.")
 
 @router.post("/extract-single-page")
 async def extract_single_page(file: UploadFile = File(...), page_number: int = Form(...)):
