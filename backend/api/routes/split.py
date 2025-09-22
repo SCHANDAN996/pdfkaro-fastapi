@@ -47,7 +47,7 @@ async def split_pdf(file: UploadFile = File(...), pages_to_extract: str = Form(.
         return StreamingResponse(output_buffer, media_type=media_type, headers={"Content-Disposition": f"attachment; filename={filename}"})
     except Exception as e:
         logger.error(f"Error during splitting: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error during PDF splitting.")
+        raise HTTPException(status_code=500, detail="Error during PDF splitting process.")
 
 @router.post("/extract-single-page")
 async def extract_single_page(file: UploadFile = File(...), page_number: int = Form(...)):
