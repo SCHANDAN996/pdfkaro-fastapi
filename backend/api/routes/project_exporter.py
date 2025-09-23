@@ -50,15 +50,11 @@ async def process_structure(request: ProcessRequest):
         final_content = ""
         if request.align_structure:
             file_structure = create_tree_structure(request.files)
-            final_content += "Project Structure:\n"
-            final_content += generate_aligned_output(file_structure)
-            final_content += "\n" + ("=" * 50) + "\n\n"
+            final_content += "Project Structure:\n" + generate_aligned_output(file_structure) + "\n" + ("=" * 50) + "\n\n"
         for file_data in request.files:
             if request.include_paths:
                 final_content += f"--- File: {file_data.path} ---\n\n"
             final_content += file_data.content + "\n\n"
-            if request.include_paths:
-                final_content += f"--- End of File: {file_data.path} ---\n\n" + ("=" * 50) + "\n\n"
         if request.output_format == "docx":
             doc = docx.Document()
             doc.add_paragraph(final_content)
@@ -73,7 +69,6 @@ async def process_structure(request: ProcessRequest):
             filename = "project_export_by_PDFkaro.in.txt"
         return StreamingResponse(buffer, media_type=media_type, headers={"Content-Disposition": f"attachment; filename={filename}"})
     except Exception as e:
-        logger.error(f"Error processing structure: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error creating single file export.")
 
 @router.post("/zip")
@@ -82,15 +77,10 @@ async def export_zip_structure(request: ProcessRequest):
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             if request.align_structure:
-                tree_structure = create_tree_structure(request.files)
-                summary_content = "Project Structure:\n"
-                summary_content += generate_aligned_output(tree_structure)
+                summary_content = "Project Structure:\n" + generate_aligned_output(create_tree_structure(request.files))
                 zip_file.writestr("00_project_structure.txt", summary_content)
             for file_data in request.files:
-                file_content = ""
-                if request.include_paths:
-                    file_content += f"--- File: {file_data.path} ---\n\n"
-                file_content += file_data.content
+                file_content = f"--- File: {file_data.path} ---\n\n" + file_data.content if request.include_paths else file_data.content
                 if request.output_format == "docx":
                     doc = docx.Document()
                     doc.add_paragraph(file_content)
@@ -104,11 +94,6 @@ async def export_zip_structure(request: ProcessRequest):
                     file_name_in_zip = f"{file_data.path}.txt" if not file_data.path.endswith('.txt') else file_data.path
                     zip_file.writestr(file_name_in_zip, file_content.encode('utf-8'))
         zip_buffer.seek(0)
-        return StreamingResponse(
-            zip_buffer,
-            media_type="application/zip",
-            headers={"Content-Disposition": "attachment; filename=project_export_by_PDFkaro.in.zip"}
-        )
+        return StreamingResponse(zip_buffer, media_type="application/zip", headers={"Content-Disposition": "attachment; filename=project_export_by_PDFkaro.in.zip"})
     except Exception as e:
-        logger.error(f"Error creating zip archive: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error creating zip export.")
